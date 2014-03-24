@@ -37,6 +37,7 @@
     <Compile Include="MsgPackSerializer.cs" />
     <Compile Include="SerializableProperty.cs" />
     <Compile Include="Extensions\BinaryWriterExtensions.cs" />
+    <Compile Include="MsgPackAttribute.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

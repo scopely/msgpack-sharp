@@ -8,8 +8,11 @@ namespace scopely.msgpacksharp.tests
 		{
 		}
 
+		[MsgPack(Sequence = 10)]
 		public string AnimalName { get; set; }
+		[MsgPack(Sequence = 20)]
 		public string AnimalKind { get; set; }
+		[MsgPack(Sequence = 30)]
 		public AnimalColor AnimalColor { get; set; }
 	}
 }
