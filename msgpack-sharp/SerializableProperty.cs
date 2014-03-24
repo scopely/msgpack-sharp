@@ -11,11 +11,12 @@ namespace scopely.msgpacksharp
 		private string name;
 		private Type valueType;
 
-		internal SerializableProperty(PropertyInfo propInfo)
+		internal SerializableProperty(PropertyInfo propInfo, int sequence)
 		{
 			this.propInfo = propInfo;
 			this.name = propInfo.Name;
 			this.valueType = propInfo.PropertyType;
+			Sequence = sequence;
 		}
 
 		internal PropertyInfo PropInfo
@@ -33,21 +34,46 @@ namespace scopely.msgpacksharp
 			get { return valueType; }
 		}
 
-		internal void Serialize(object o, BinaryWriter writer)
+		internal int Sequence { get; set; }
+
+		internal void Serialize(object o, BinaryWriter writer, bool asDictionary)
 		{
-			writer.WriteMsgPack(name);
+			if (asDictionary)
+			{
+				writer.WriteMsgPack(name);
+			}
 			if (ValueType == typeof(string))
 			{
 				writer.WriteMsgPack(PropInfo.GetValue(o, emptyObjArgs) as string);
 			}
-			else if (ValueType == typeof(float) || ValueType == typeof(double))
+			else if (ValueType == typeof(float))
 			{
 				writer.WriteMsgPack((float)PropInfo.GetValue(o, emptyObjArgs));
+			}
+			else if (ValueType == typeof(double))
+			{
+				writer.WriteMsgPack((double)PropInfo.GetValue(o, emptyObjArgs));
+			}
+			else if (ValueType == typeof(int))
+			{
+				writer.WriteMsgPack((int)PropInfo.GetValue(o, emptyObjArgs));
+			}
+			else if (ValueType == typeof(uint))
+			{
+				writer.WriteMsgPack((uint)PropInfo.GetValue(o, emptyObjArgs));
+			}
+			else if (ValueType == typeof(long))
+			{
+				writer.WriteMsgPack((long)PropInfo.GetValue(o, emptyObjArgs));
+			}
+			else if (ValueType == typeof(ulong))
+			{
+				writer.WriteMsgPack((ulong)PropInfo.GetValue(o, emptyObjArgs));
 			}
 			else
 			{
 				//throw new InvalidDataException("Unsupported property type [" + valueType + "]");
-				MsgPackSerializer.SerializeObject(PropInfo.GetValue(o, emptyObjArgs), writer);
+				MsgPackSerializer.SerializeObject(PropInfo.GetValue(o, emptyObjArgs), writer, true);
 			}
 		}
 	}
