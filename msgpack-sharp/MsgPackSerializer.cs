@@ -68,7 +68,7 @@ namespace scopely.msgpacksharp
 			props = new Dictionary<string, SerializableProperty>();
 			foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 			{
-				if (props.Count == 15)
+				if (props.Count >= 15)
 					throw new IndexOutOfRangeException("Only Types with 15 or fewer properties can be handled by MsgPack. You are trying to serialize a Type with more properties than that. Consider using a simpler DTO to wrap your payload.");
 				props[prop.Name] = new SerializableProperty(prop);
 			}

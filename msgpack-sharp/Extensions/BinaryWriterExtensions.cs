@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using scopely.msgpacksharp.enums;
 
 namespace scopely.msgpacksharp
 {
@@ -10,19 +11,19 @@ namespace scopely.msgpacksharp
 
 		public static void WriteMsgPack(this BinaryWriter writer, float val)
 		{
-			writer.Write((byte)0xca);
+            writer.Write((byte)MsgPackConstants.Formats.Float32);
 			writer.Write(val);
 		}
 
 		public static void WriteMsgPack(this BinaryWriter writer, double val)
 		{
-			writer.Write((byte)0xcb);
+            writer.Write((byte)MsgPackConstants.Formats.Float64);
 			writer.Write(val);
 		}
 
 		public static void WriteMsgPack(this BinaryWriter writer, string s)
 		{
-			if (s == null || s.Length == 0)
+            if (string.IsNullOrEmpty(s))
 				writer.Write((byte)0xa0);
 			else
 			{
@@ -35,18 +36,18 @@ namespace scopely.msgpacksharp
 				}
 				else if (length <= 255)
 				{
-					writer.Write((byte)0xd9);
+                    writer.Write((byte)MsgPackConstants.Formats.Str8);
 					writer.Write((byte)length);
 				}
 				else if (length <= 65535)
 				{
-					writer.Write((byte)0xda);
+                    writer.Write((byte)MsgPackConstants.Formats.Str16);
 					writer.Write((byte)((length | 0xFF00) >> 8));
 					writer.Write((byte)(length | 0x00FF));
 				}
 				else
 				{
-					writer.Write((byte)0xdb);
+                    writer.Write((byte)MsgPackConstants.Formats.Str32);
 					writer.Write((byte)((length | 0xFF000000) >> 24));
 					writer.Write((byte)((length | 0x00FF0000) >> 16));
 					writer.Write((byte)((length | 0x0000FF00) >> 8));
