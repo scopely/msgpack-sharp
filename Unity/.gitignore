@@ -1,0 +1,24 @@
+# General
+.DS_Store
+*.sublime-workspace
+
+# Unity
+*.sln
+*.csproj
+*.pidb
+*.userprefs
+*.swatch
+*.rsp
+*.suo
+*.user
+UpgradeLog*.htm
+Unity/MessagePackProject/Android/app/assets/bin/Data
+Unity/MessagePackProject/libmono.so
+Unity/MessagePackProject/libunity.so
+.mayaSwatches/
+Unity/MessagePackProject/Assembly-CSharp.csproj
+Unity/MessagePackProject/Temp/
+Unity/MessagePackProject/Builds/
+Unity/MessagePackProject/Library/
+Unity/MessagePackProject/smcs.rsp
+Unity/MessagePackProject/smcs.rsp.meta
