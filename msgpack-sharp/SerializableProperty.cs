@@ -7,7 +7,6 @@ namespace scopely.msgpacksharp
 {
 	internal class SerializableProperty
 	{
-		private const int MaxFixedStringLength = 31;
 		private static readonly object[] emptyObjArgs = new object[] {};
 		private PropertyInfo propInfo;
 		private string name;
@@ -96,19 +95,19 @@ namespace scopely.msgpacksharp
 			string result = null;
 			int length = 0;
 			byte header = reader.ReadByte();
-			if (header >= 0xa0 && header <= 0xbf)
+            if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
 			{
-				length = header - 0xa0;
+				length = header - MsgPackConstants.FixedString.MIN;
 			}
-			else if (header == 0xd9)
+            else if (header == MsgPackConstants.Formats.STR_8)
 			{
 				length = reader.ReadByte();
 			}
-			else if (header == 0xda)
+            else if (header == MsgPackConstants.Formats.STR_16)
 			{
 				length = reader.ReadByte() << 8 + reader.ReadByte();
 			}
-			else if (header == 0xdb)
+            else if (header == MsgPackConstants.Formats.STR_32)
 			{
 				length = reader.ReadByte() << 24 + reader.ReadByte() << 16 + reader.ReadByte() << 8 + reader.ReadByte();
 			}
@@ -119,43 +118,43 @@ namespace scopely.msgpacksharp
 			
 		private void WriteMsgPack(BinaryWriter writer, float val)
 		{
-			writer.Write((byte)0xca);
+            writer.Write(MsgPackConstants.Formats.FLOAT_32);
 			writer.Write(val);
 		}
 
 		private void WriteMsgPack(BinaryWriter writer, double val)
 		{
-			writer.Write((byte)0xcb);
+            writer.Write(MsgPackConstants.Formats.FLOAT_64);
 			writer.Write(val);
 		}
 
 		private void WriteMsgPack(BinaryWriter writer, string s)
 		{
-			if (s == null || s.Length == 0)
-				writer.Write((byte)0xa0);
+            if (string.IsNullOrEmpty(s))
+				writer.Write(MsgPackConstants.FixedString.MIN);
 			else
 			{
 				byte[] utf8Bytes = UTF8Encoding.UTF8.GetBytes(s);
 				uint length = (uint)utf8Bytes.Length;
-				if (length <= MaxFixedStringLength)
+                if (length <= MsgPackConstants.FixedString.MAX_LENGTH)
 				{
-					byte val = (byte)(0xa0 | length);
+					byte val = (byte)(MsgPackConstants.FixedString.MIN | length);
 					writer.Write(val);
 				}
 				else if (length <= 255)
 				{
-					writer.Write((byte)0xd9);
+                    writer.Write(MsgPackConstants.Formats.STR_8);
 					writer.Write((byte)length);
 				}
 				else if (length <= 65535)
 				{
-					writer.Write((byte)0xda);
+                    writer.Write(MsgPackConstants.Formats.STR_16);
 					writer.Write((byte)((length | 0xFF00) >> 8));
 					writer.Write((byte)(length | 0x00FF));
 				}
 				else
 				{
-					writer.Write((byte)0xdb);
+                    writer.Write(MsgPackConstants.Formats.STR_32);
 					writer.Write((byte)((length | 0xFF000000) >> 24));
 					writer.Write((byte)((length | 0x00FF0000) >> 16));
 					writer.Write((byte)((length | 0x0000FF00) >> 8));

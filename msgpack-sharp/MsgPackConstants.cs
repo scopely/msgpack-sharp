@@ -2,21 +2,36 @@
 using System.Reflection;
 using System.IO;
 
-namespace scopely.msgpacksharp.enums
+namespace scopely.msgpacksharp
 {
     internal static class MsgPackConstants
     {
-        public enum Formats : byte
+        public const int MAX_PROPERTY_COUNT = 15;
+        
+        public static class Formats 
         {
-            Float32 = 0xca,
-            Float64 = 0xcb,
-            Double = 0xcb,
-            Str8 = 0xd9,
-            String8 = 0xd9,
-            Str16 = 0xda,
-            String16 = 0xda,
-            Str32 = 0xdb,
-            String32 = 0xdb,
+            public const byte FLOAT_32 = 0xca;
+            public const byte FLOAT_64 = 0xcb;
+            public const byte DOUBLE = 0xcb;
+            public const byte STR_8 = 0xd9;
+            public const byte STRING_8 = 0xd9;
+            public const byte STR_16 = 0xda;
+            public const byte STRING_16 = 0xda;
+            public const byte STR_32 = 0xdb;
+            public const byte STRING_32 = 0xdb;
+        }
+        
+        public static class FixedString
+        {
+            public const byte MIN = 0xa0;
+            public const byte MAX = 0xbf;
+            public const int MAX_LENGTH = 31;
+        }
+        
+        public static class FixedMap
+        {
+            public const byte MIN = 0x80;
+            public const byte MAX = 0x8f;
         }
     }
 }
