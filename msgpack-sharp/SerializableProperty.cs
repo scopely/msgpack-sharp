@@ -163,39 +163,39 @@ namespace scopely.msgpacksharp
 			{
 				result = header & 128;
 			}
-			else if (header >= 0xe0)
+            else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN)
 			{
 				result = -(header - 224);
 			}
-			else if (header == 0xcc)
+            else if (header == MsgPackConstants.Formats.UINT_8)
 			{
 				result = reader.ReadByte();
 			}
-			else if (header == 0xcd)
+            else if (header == MsgPackConstants.Formats.UINT_16)
 			{
 				result = reader.ReadByte() << 8 + reader.ReadByte();
 			}
-			else if (header == 0xce)
+            else if (header == MsgPackConstants.Formats.UINT_32)
 			{
 				result = reader.ReadByte() << 24 + reader.ReadByte() << 16 + reader.ReadByte() << 8 + reader.ReadByte();
 			}
-			else if (header == 0xcf)
+            else if (header == MsgPackConstants.Formats.UINT_64)
 			{
 				result = (long)reader.ReadUInt64();
 			}
-			else if (header == 0xd0)
+            else if (header == MsgPackConstants.Formats.INT_8)
 			{
 				result = reader.ReadSByte();
 			}
-			else if (header == 0xd1)
+            else if (header == MsgPackConstants.Formats.INT_16)
 			{
 				result = reader.ReadInt16();
 			}
-			else if (header == 0xd2)
+            else if (header == MsgPackConstants.Formats.INT_32)
 			{
 				result = reader.ReadInt32();
 			}
-			else if (header == 0xd3)
+            else if (header == MsgPackConstants.Formats.INT_64)
 			{
 				result = reader.ReadInt64();
 			}
@@ -250,44 +250,44 @@ namespace scopely.msgpacksharp
 
 		private void WriteMsgPack(BinaryWriter writer, long val)
 		{
-			if (val >= 0 && val <= MsgPackConstants.POSITIVE_FIXINT_MAX)
+            if (val >= MsgPackConstants.FixedInteger.POSITIVE_MIN && val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
 			{
 				writer.Write((byte)val);
 			}
 			else if (val >= 0 && val <= byte.MaxValue)
 			{
-				writer.Write((byte)0xcc);
+                writer.Write(MsgPackConstants.Formats.UINT_8);
 				writer.Write((byte)val);
 			}
 			else if (val >= sbyte.MinValue && val <= sbyte.MaxValue)
 			{
-				writer.Write((byte)0xd0);
+                writer.Write(MsgPackConstants.Formats.INT_8);
 				writer.Write((sbyte)val);
 			}
 			else if (val >= short.MinValue && val <= short.MaxValue)
 			{
-				writer.Write((byte)0xd1);
+                writer.Write(MsgPackConstants.Formats.INT_16);
 				writer.Write((short)val);
 			}
 			else if (val >= Int32.MinValue && val <= Int32.MaxValue)
 			{
-				writer.Write((byte)0xd2);
+                writer.Write(MsgPackConstants.Formats.INT_32);
 				writer.Write((int)val);
 			}
 			else if (val < 0)
 			{
-				writer.Write((byte)0xd3);
+                writer.Write(MsgPackConstants.Formats.INT_64);
 				writer.Write((long)val);
 			}
 			else if (val >= 0 && val <= 65535)
 			{
-				writer.Write((byte)0xcd);
+                writer.Write(MsgPackConstants.Formats.UINT_16);
 				writer.Write((byte)((val & 0xFF00) >> 8));
 				writer.Write((byte)(val & 0x00FF));
 			}
 			else if (val >= 0 && val <= UInt32.MaxValue)
 			{
-				writer.Write((byte)0xce);
+                writer.Write(MsgPackConstants.Formats.UINT_32);
 				writer.Write((byte)((val & 0xFF000000) >> 24));
 				writer.Write((byte)((val & 0x00FF0000) >> 16));
 				writer.Write((byte)((val & 0x0000FF00) >> 8));
@@ -295,7 +295,7 @@ namespace scopely.msgpacksharp
 			}
 			else if (val >= 0)
 			{
-				writer.Write((byte)0xcf);
+                writer.Write(MsgPackConstants.Formats.UINT_64);
 				writer.Write((byte)(((ulong)val & 0xFF00000000000000) >> 56));
 				writer.Write((byte)(((ulong)val & 0x00FF000000000000) >> 48));
 				writer.Write((byte)(((ulong)val & 0x0000FF0000000000) >> 40));
