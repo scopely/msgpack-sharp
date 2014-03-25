@@ -56,10 +56,14 @@ namespace scopely.msgpacksharp
 				WriteMsgPack(writer, (double)PropInfo.GetValue(o, emptyObjArgs));
 			}
 			else if (ValueType == typeof(int) || ValueType == typeof(uint) || ValueType == typeof(short) ||
-				ValueType == typeof(ushort) || ValueType == typeof(long) || ValueType == typeof(ulong) ||
-				ValueType == typeof(sbyte) || ValueType == typeof(byte))
+			         ValueType == typeof(ushort) || ValueType == typeof(long) || ValueType == typeof(ulong) ||
+			         ValueType == typeof(sbyte) || ValueType == typeof(byte))
 			{
 				WriteMsgPack(writer, (long)PropInfo.GetValue(o, emptyObjArgs));
+			}
+			else if (ValueType == typeof(DateTime))
+			{
+				WriteMsgPack(writer, (DateTime)PropInfo.GetValue(o, emptyObjArgs));
 			}
 			else
 			{
@@ -118,6 +122,12 @@ namespace scopely.msgpacksharp
 			{
 				propInfo.SetValue(o, (double)ReadMsgPackDouble(reader), emptyObjArgs);
 			}
+			else if (ValueType == typeof(DateTime))
+			{
+				ulong unixEpochTicks = ReadMsgPackULong(reader);
+				DateTime dateTime = new DateTime((long)((unixEpochTicks - 621355968000000000Lu) * 10000Lu));
+				propInfo.SetValue(o, dateTime, emptyObjArgs);
+			}
 			else
 			{
 				object newInstance = MsgPackSerializer.DeserializeObject(ValueType, reader, asDictionary);
@@ -135,6 +145,14 @@ namespace scopely.msgpacksharp
 		{
 			reader.ReadByte(); // 0xcb
 			return reader.ReadDouble();
+		}
+
+		private ulong ReadMsgPackULong(BinaryReader reader)
+		{
+			byte header = reader.ReadByte();
+			if (header != 0xcf)
+				throw new InvalidDataException();
+			return reader.ReadUInt64();
 		}
 
 		private long ReadMsgPackInt(BinaryReader reader)
@@ -163,9 +181,7 @@ namespace scopely.msgpacksharp
 			}
 			else if (header == 0xcf)
 			{
-				result = reader.ReadByte() << 56 + reader.ReadByte() << 48 + reader.ReadByte() << 40 +
-				reader.ReadByte() << 32 + reader.ReadByte() << 24 + reader.ReadByte() << 16 +
-				reader.ReadByte() << 8 + reader.ReadByte();
+				result = (long)reader.ReadUInt64();
 			}
 			else if (header == 0xd0)
 			{
@@ -226,6 +242,12 @@ namespace scopely.msgpacksharp
 			writer.Write(val);
 		}
 
+		private void WriteMsgPack(BinaryWriter writer, DateTime val)
+		{
+			ulong unixEpochTicks = ((ulong)val.Ticks / 10000Lu) + 621355968000000000Lu;
+			WriteMsgPack(writer, unixEpochTicks);
+		}
+
 		private void WriteMsgPack(BinaryWriter writer, long val)
 		{
 			if (val >= 0 && val <= MsgPackConstants.POSITIVE_FIXINT_MAX)
@@ -275,14 +297,20 @@ namespace scopely.msgpacksharp
 			{
 				writer.Write((byte)0xcf);
 				writer.Write((byte)(((ulong)val & 0xFF00000000000000) >> 56));
-				writer.Write((byte)((val & 0x00FF000000000000) >> 48));
-				writer.Write((byte)((val & 0x0000FF0000000000) >> 40));
-				writer.Write((byte)((val & 0x000000FF00000000) >> 32));
-				writer.Write((byte)((val & 0x00000000FF000000) >> 24));
-				writer.Write((byte)((val & 0x0000000000FF0000) >> 16));
-				writer.Write((byte)((val & 0x000000000000FF00) >> 8));
-				writer.Write((byte)((val & 0x00000000000000FF)));
+				writer.Write((byte)(((ulong)val & 0x00FF000000000000) >> 48));
+				writer.Write((byte)(((ulong)val & 0x0000FF0000000000) >> 40));
+				writer.Write((byte)(((ulong)val & 0x000000FF00000000) >> 32));
+				writer.Write((byte)(((ulong)val & 0x00000000FF000000) >> 24));
+				writer.Write((byte)(((ulong)val & 0x0000000000FF0000) >> 16));
+				writer.Write((byte)(((ulong)val & 0x000000000000FF00) >> 8));
+				writer.Write((byte)(((ulong)val & 0x00000000000000FF)));
 			}
+		}
+
+		private void WriteMsgPack(BinaryWriter writer, ulong val)
+		{
+			writer.Write((byte)0xcf);
+			writer.Write(val);
 		}
 
 		private void WriteMsgPack(BinaryWriter writer, string s)

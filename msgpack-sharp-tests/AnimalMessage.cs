@@ -14,5 +14,7 @@ namespace scopely.msgpacksharp.tests
 		public string AnimalKind { get; set; }
 		[MsgPack(Sequence = 30)]
 		public AnimalColor AnimalColor { get; set; }
+		[MsgPack(Sequence = 40)]
+		public DateTime BirthDay { get; set; }
 	}
 }
