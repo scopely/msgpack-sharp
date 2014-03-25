@@ -14,6 +14,7 @@ namespace scopely.msgpacksharp.tests
 			msg.AnimalKind = "Cat";
 			msg.AnimalName = "Lunchbox";
 			msg.AnimalColor = new AnimalColor() { Red = 1.0f, Green = 0.1f, Blue = 0.1f };
+			msg.BirthDay = new DateTime(1974, 1, 4);
 
 			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
@@ -28,6 +29,7 @@ namespace scopely.msgpacksharp.tests
 			Assert.AreEqual(msg.AnimalColor.Red, restored.AnimalColor.Red);
 			Assert.AreEqual(msg.AnimalColor.Green, restored.AnimalColor.Green);
 			Assert.AreEqual(msg.AnimalColor.Blue, restored.AnimalColor.Blue);
+			Assert.AreEqual(msg.BirthDay, restored.BirthDay);
 		}
 	}
 }
