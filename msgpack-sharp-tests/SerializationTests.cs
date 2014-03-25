@@ -24,6 +24,10 @@ namespace scopely.msgpacksharp.tests
 			Assert.IsNotNull(restored);
 			Assert.AreEqual(msg.AnimalKind, restored.AnimalKind);
 			Assert.AreEqual(msg.AnimalName, restored.AnimalName);
+			Assert.IsNotNull(msg.AnimalColor);
+			Assert.AreEqual(msg.AnimalColor.Red, restored.AnimalColor.Red);
+			Assert.AreEqual(msg.AnimalColor.Green, restored.AnimalColor.Green);
+			Assert.AreEqual(msg.AnimalColor.Blue, restored.AnimalColor.Blue);
 		}
 	}
 }

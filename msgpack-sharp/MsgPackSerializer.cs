@@ -53,14 +53,22 @@ namespace scopely.msgpacksharp
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
                     bool asDictionary = buffer[0] >= MsgPackConstants.FixedMap.MIN && buffer[0] <= MsgPackConstants.FixedMap.MAX;
-					return GetSerializer(typeof(T)).Deserialize<T>(reader, asDictionary);
+					return (T)GetSerializer(typeof(T)).Deserialize(typeof(T), reader, asDictionary);
 				}
 			}
 		}
 
-		public T Deserialize<T>(BinaryReader reader, bool asDictionary) where T : new()
+		internal static object DeserializeObject(Type type, BinaryReader reader, bool asDictionary)
 		{
-			T result = new T();
+			return GetSerializer(type).Deserialize(type, reader, asDictionary);
+		}
+
+		internal object Deserialize(Type type, BinaryReader reader, bool asDictionary)
+		{
+			ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
+			if (constructorInfo == null)
+				throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
+			object result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
 			foreach (SerializableProperty prop in props)
 			{
 				prop.Deserialize(result, reader, asDictionary);
