@@ -32,11 +32,6 @@ namespace scopely.msgpacksharp
 			return GetSerializer(o.GetType()).Serialize(o, asDictionary);
 		}
 
-		internal static void SerializeObject(object o, BinaryWriter writer, bool asDictionary)
-		{
-			GetSerializer(o.GetType()).Serialize(o, writer, asDictionary);
-		}
-
 		public byte[] Serialize(object o, bool asDictionary = false)
 		{
 			if (o == null)
@@ -51,6 +46,33 @@ namespace scopely.msgpacksharp
 				}
 			}
 			return result;
+		}
+
+		public static T Deserialize<T>(byte[] buffer) where T : new()
+		{
+			using (MemoryStream stream = new MemoryStream(buffer))
+			{
+				using (BinaryReader reader = new BinaryReader(stream))
+				{
+					bool asDictionary = buffer[0] >= 0x80 && buffer[0] <= 0x8F;
+					return GetSerializer(typeof(T)).Deserialize<T>(reader, asDictionary);
+				}
+			}
+		}
+
+		public T Deserialize<T>(BinaryReader reader, bool asDictionary) where T : new()
+		{
+			T result = new T();
+			foreach (SerializableProperty prop in props)
+			{
+				prop.Deserialize(result, reader, asDictionary);
+			}
+			return result;
+		}
+
+		internal static void SerializeObject(object o, BinaryWriter writer, bool asDictionary)
+		{
+			GetSerializer(o.GetType()).Serialize(o, writer, asDictionary);
 		}
 
 		private void Serialize(object o, BinaryWriter writer, bool asDictionary)
