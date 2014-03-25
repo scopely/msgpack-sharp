@@ -19,6 +19,11 @@ namespace scopely.msgpacksharp.tests
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
 			Console.Out.WriteLine("Payload is " + payload.Length + " bytes!");
+
+			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
+			Assert.IsNotNull(restored);
+			Assert.AreEqual(msg.AnimalKind, restored.AnimalKind);
+			Assert.AreEqual(msg.AnimalName, restored.AnimalName);
 		}
 	}
 }

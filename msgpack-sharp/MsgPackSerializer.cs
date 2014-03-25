@@ -34,8 +34,6 @@ namespace scopely.msgpacksharp
 
 		public byte[] Serialize(object o, bool asDictionary = false)
 		{
-			if (o == null)
-				throw new ArgumentException("Can't serialize a null reference", "o");
 			byte[] result = null;
 			using (MemoryStream stream = new MemoryStream())
 			{
@@ -77,14 +75,19 @@ namespace scopely.msgpacksharp
 
 		private void Serialize(object o, BinaryWriter writer, bool asDictionary)
 		{
-			if (asDictionary)
+			if (o == null)
+				writer.Write((byte)MsgPackConstants.Formats.NIL);
+			else
 			{
-                byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
-				writer.Write(val);
-			}
-			foreach (SerializableProperty prop in props)
-			{
-				prop.Serialize(o, writer, asDictionary);
+				if (asDictionary)
+				{
+					byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
+					writer.Write(val);
+				}
+				foreach (SerializableProperty prop in props)
+				{
+					prop.Serialize(o, writer, asDictionary);
+				}
 			}
 		}
 

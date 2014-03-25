@@ -7,6 +7,8 @@ namespace scopely.msgpacksharp
     internal static class MsgPackConstants
     {
         public const int MAX_PROPERTY_COUNT = 15;
+		public const byte POSITIVE_FIXINT_MAX = 0x7f;
+		public const int NEGATIVE_FIXINT_MIN = -31;
         
         public static class Formats 
         {
@@ -19,6 +21,7 @@ namespace scopely.msgpacksharp
             public const byte STRING_16 = 0xda;
             public const byte STR_32 = 0xdb;
             public const byte STRING_32 = 0xdb;
+			public const byte NIL = 0xc0;
         }
         
         public static class FixedString

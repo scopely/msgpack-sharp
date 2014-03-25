@@ -55,21 +55,11 @@ namespace scopely.msgpacksharp
 			{
 				WriteMsgPack(writer, (double)PropInfo.GetValue(o, emptyObjArgs));
 			}
-			else if (ValueType == typeof(int))
-			{
-				WriteMsgPack(writer, (int)PropInfo.GetValue(o, emptyObjArgs));
-			}
-			else if (ValueType == typeof(uint))
-			{
-				WriteMsgPack(writer, (uint)PropInfo.GetValue(o, emptyObjArgs));
-			}
-			else if (ValueType == typeof(long))
+			else if (ValueType == typeof(int) || ValueType == typeof(uint) || ValueType == typeof(short) ||
+				ValueType == typeof(ushort) || ValueType == typeof(long) || ValueType == typeof(ulong) ||
+				ValueType == typeof(sbyte) || ValueType == typeof(byte))
 			{
 				WriteMsgPack(writer, (long)PropInfo.GetValue(o, emptyObjArgs));
-			}
-			else if (ValueType == typeof(ulong))
-			{
-				WriteMsgPack(writer, (ulong)PropInfo.GetValue(o, emptyObjArgs));
 			}
 			else
 			{
@@ -88,6 +78,109 @@ namespace scopely.msgpacksharp
 			{
 				propInfo.SetValue(o, ReadMsgPackString(reader), emptyObjArgs);
 			}
+			else if (ValueType == typeof(int))
+			{
+				propInfo.SetValue(o, (int)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(uint))
+			{
+				propInfo.SetValue(o, (uint)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(byte))
+			{
+				propInfo.SetValue(o, (byte)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(sbyte))
+			{
+				propInfo.SetValue(o, (sbyte)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(short))
+			{
+				propInfo.SetValue(o, (short)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(ushort))
+			{
+				propInfo.SetValue(o, (ushort)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(long))
+			{
+				propInfo.SetValue(o, (long)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(ulong))
+			{
+				propInfo.SetValue(o, (ulong)ReadMsgPackInt(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(float))
+			{
+				propInfo.SetValue(o, (float)ReadMsgPackFloat(reader), emptyObjArgs);
+			}
+			else if (ValueType == typeof(double))
+			{
+				propInfo.SetValue(o, (double)ReadMsgPackDouble(reader), emptyObjArgs);
+			}
+		}
+
+		private float ReadMsgPackFloat(BinaryReader reader)
+		{
+			reader.ReadByte(); // 0xca
+			return reader.ReadSingle();
+		}
+
+		private double ReadMsgPackDouble(BinaryReader reader)
+		{
+			reader.ReadByte(); // 0xcb
+			return reader.ReadDouble();
+		}
+
+		private long ReadMsgPackInt(BinaryReader reader)
+		{
+			byte header = reader.ReadByte();
+			long result = 0;
+			if (header < 128)
+			{
+				result = header & 128;
+			}
+			else if (header >= 0xe0)
+			{
+				result = -(header - 224);
+			}
+			else if (header == 0xcc)
+			{
+				result = reader.ReadByte();
+			}
+			else if (header == 0xcd)
+			{
+				result = reader.ReadByte() << 8 + reader.ReadByte();
+			}
+			else if (header == 0xce)
+			{
+				result = reader.ReadByte() << 24 + reader.ReadByte() << 16 + reader.ReadByte() << 8 + reader.ReadByte();
+			}
+			else if (header == 0xcf)
+			{
+				result = reader.ReadByte() << 56 + reader.ReadByte() << 48 + reader.ReadByte() << 40 +
+				reader.ReadByte() << 32 + reader.ReadByte() << 24 + reader.ReadByte() << 16 +
+				reader.ReadByte() << 8 + reader.ReadByte();
+			}
+			else if (header == 0xd0)
+			{
+				result = reader.ReadSByte();
+			}
+			else if (header == 0xd1)
+			{
+				result = reader.ReadInt16();
+			}
+			else if (header == 0xd2)
+			{
+				result = reader.ReadInt32();
+			}
+			else if (header == 0xd3)
+			{
+				result = reader.ReadInt64();
+			}
+			else
+				throw new InvalidDataException();
+			return result;
 		}
 
 		private string ReadMsgPackString(BinaryReader reader)
@@ -126,6 +219,65 @@ namespace scopely.msgpacksharp
 		{
             writer.Write(MsgPackConstants.Formats.FLOAT_64);
 			writer.Write(val);
+		}
+
+		private void WriteMsgPack(BinaryWriter writer, long val)
+		{
+			if (val >= 0 && val <= MsgPackConstants.POSITIVE_FIXINT_MAX)
+			{
+				writer.Write((byte)val);
+			}
+			else if (val >= 0 && val <= byte.MaxValue)
+			{
+				writer.Write((byte)0xcc);
+				writer.Write((byte)val);
+			}
+			else if (val >= sbyte.MinValue && val <= sbyte.MaxValue)
+			{
+				writer.Write((byte)0xd0);
+				writer.Write((sbyte)val);
+			}
+			else if (val >= short.MinValue && val <= short.MaxValue)
+			{
+				writer.Write((byte)0xd1);
+				writer.Write((short)val);
+			}
+			else if (val >= Int32.MinValue && val <= Int32.MaxValue)
+			{
+				writer.Write((byte)0xd2);
+				writer.Write((int)val);
+			}
+			else if (val < 0)
+			{
+				writer.Write((byte)0xd3);
+				writer.Write((long)val);
+			}
+			else if (val >= 0 && val <= 65535)
+			{
+				writer.Write((byte)0xcd);
+				writer.Write((byte)((val & 0xFF00) >> 8));
+				writer.Write((byte)(val & 0x00FF));
+			}
+			else if (val >= 0 && val <= UInt32.MaxValue)
+			{
+				writer.Write((byte)0xce);
+				writer.Write((byte)((val & 0xFF000000) >> 24));
+				writer.Write((byte)((val & 0x00FF0000) >> 16));
+				writer.Write((byte)((val & 0x0000FF00) >> 8));
+				writer.Write((byte)(val & 0x000000FF));
+			}
+			else if (val >= 0)
+			{
+				writer.Write((byte)0xcf);
+				writer.Write((byte)(((ulong)val & 0xFF00000000000000) >> 56));
+				writer.Write((byte)((val & 0x00FF000000000000) >> 48));
+				writer.Write((byte)((val & 0x0000FF0000000000) >> 40));
+				writer.Write((byte)((val & 0x000000FF00000000) >> 32));
+				writer.Write((byte)((val & 0x00000000FF000000) >> 24));
+				writer.Write((byte)((val & 0x0000000000FF0000) >> 16));
+				writer.Write((byte)((val & 0x000000000000FF00) >> 8));
+				writer.Write((byte)((val & 0x00000000000000FF)));
+			}
 		}
 
 		private void WriteMsgPack(BinaryWriter writer, string s)
