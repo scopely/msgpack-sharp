@@ -7,7 +7,7 @@ namespace scopely.msgpacksharp
 {
 	internal class SerializableProperty
 	{
-		private static readonly object[] emptyObjArgs = new object[] {};
+		internal static readonly object[] emptyObjArgs = new object[] {};
 		private PropertyInfo propInfo;
 		private string name;
 		private Type valueType;
@@ -64,7 +64,7 @@ namespace scopely.msgpacksharp
 			else
 			{
 				//throw new InvalidDataException("Unsupported property type [" + valueType + "]");
-				MsgPackSerializer.SerializeObject(PropInfo.GetValue(o, emptyObjArgs), writer, true);
+				MsgPackSerializer.SerializeObject(PropInfo.GetValue(o, emptyObjArgs), writer, asDictionary);
 			}
 		}
 
@@ -72,7 +72,7 @@ namespace scopely.msgpacksharp
 		{
 			if (asDictionary)
 			{
-				throw new NotSupportedException();
+				throw new NotImplementedException();
 			}
 			if (ValueType == typeof(string))
 			{
@@ -117,6 +117,11 @@ namespace scopely.msgpacksharp
 			else if (ValueType == typeof(double))
 			{
 				propInfo.SetValue(o, (double)ReadMsgPackDouble(reader), emptyObjArgs);
+			}
+			else
+			{
+				object newInstance = MsgPackSerializer.DeserializeObject(ValueType, reader, asDictionary);
+				propInfo.SetValue(o, newInstance, emptyObjArgs);
 			}
 		}
 
