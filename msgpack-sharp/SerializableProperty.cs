@@ -141,13 +141,13 @@ namespace scopely.msgpacksharp
 		{
 			byte header = reader.ReadByte();
 			long result = 0;
-			if (header < 128)
+            if (header < MsgPackConstants.FixedMap.MIN)
 			{
-				result = header & 128;
+				result = header & MsgPackConstants.FixedMap.MIN;
 			}
             else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN)
 			{
-				result = -(header - 224);
+				result = -(header - MsgPackConstants.FixedInteger.NEGATIVE_MIN);
 			}
             else if (header == MsgPackConstants.Formats.UINT_8)
 			{
@@ -257,7 +257,7 @@ namespace scopely.msgpacksharp
                 writer.Write(MsgPackConstants.Formats.INT_64);
 				writer.Write((long)val);
 			}
-			else if (val >= 0 && val <= 65535)
+            else if (val >= 0 && val <= ushort.MaxValue)
 			{
                 writer.Write(MsgPackConstants.Formats.UINT_16);
 				writer.Write((byte)((val & 0xFF00) >> 8));
@@ -298,12 +298,12 @@ namespace scopely.msgpacksharp
 					byte val = (byte)(MsgPackConstants.FixedString.MIN | length);
 					writer.Write(val);
 				}
-				else if (length <= 255)
+                else if (length <= byte.MaxValue)
 				{
                     writer.Write(MsgPackConstants.Formats.STR_8);
 					writer.Write((byte)length);
 				}
-				else if (length <= 65535)
+				else if (length <= ushort.MaxValue)
 				{
                     writer.Write(MsgPackConstants.Formats.STR_16);
 					writer.Write((byte)((length | 0xFF00) >> 8));
