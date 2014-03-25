@@ -27,6 +27,11 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="AfterBuild" command="cp ${TargetFile} Unity/MessagePackProject/Assets/" workingdir="${SolutionDir}" />
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -37,6 +42,7 @@
     <Compile Include="MsgPackSerializer.cs" />
     <Compile Include="SerializableProperty.cs" />
     <Compile Include="MsgPackAttribute.cs" />
+    <Compile Include="MsgPackConstants.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

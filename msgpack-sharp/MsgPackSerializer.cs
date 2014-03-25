@@ -54,7 +54,7 @@ namespace scopely.msgpacksharp
 			{
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
-					bool asDictionary = buffer[0] >= 0x80 && buffer[0] <= 0x8F;
+                    bool asDictionary = buffer[0] >= MsgPackConstants.FixedMap.MIN && buffer[0] <= MsgPackConstants.FixedMap.MAX;
 					return GetSerializer(typeof(T)).Deserialize<T>(reader, asDictionary);
 				}
 			}
@@ -79,7 +79,7 @@ namespace scopely.msgpacksharp
 		{
 			if (asDictionary)
 			{
-				byte val = (byte)(0x80 | props.Count);
+                byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
 				writer.Write(val);
 			}
 			foreach (SerializableProperty prop in props)
@@ -89,12 +89,16 @@ namespace scopely.msgpacksharp
 		}
 
 		private void BuildMap()
-		{
-			props = new List<SerializableProperty>();
-			foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-			{
-				if (props.Count == 15)
-					throw new IndexOutOfRangeException("Only Types with 15 or fewer properties can be handled by MsgPack. You are trying to serialize a Type with more properties than that. Consider using a simpler DTO to wrap your payload.");
+        {
+            props = new List<SerializableProperty>();
+            foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (props.Count >= MsgPackConstants.MAX_PROPERTY_COUNT)
+                {
+                    string exceptionStr = string.Format("Only Types with {0} or fewer properties can be handled by MsgPack. You are trying to serialize a Type with more properties than that. Consider using a simpler DTO to wrap your payload.",
+                        MsgPackConstants.MAX_PROPERTY_COUNT);
+                    throw new IndexOutOfRangeException(exceptionStr);
+                }
 				foreach (object att in prop.GetCustomAttributes(true))
 				{
 					MsgPackAttribute msgPackAttribute = att as MsgPackAttribute;
