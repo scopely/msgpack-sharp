@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace scopely.msgpacksharp.tests
 {
@@ -21,6 +22,8 @@ namespace scopely.msgpacksharp.tests
 		[MsgPack(Sequence = 50)]
 		public int[] SomeNumbers { get; set; }
 		[MsgPack(Sequence = 60)]
-		public AnimalColor[] SpotColors { get; set; }
+		public List<AnimalColor> SpotColors { get; set; }
+		[MsgPack(Sequence = 70)]
+		public List<AnimalColor> MoreColors { get; set; }
 	}
 }

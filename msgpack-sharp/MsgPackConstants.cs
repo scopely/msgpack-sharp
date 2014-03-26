@@ -58,6 +58,12 @@ namespace scopely.msgpacksharp
             public const byte MIN = 0x80;
             public const byte MAX = 0x8f;
         }
+
+		public static class FixedArray
+		{
+			public const byte MIN = 0x90;
+			public const byte MAX = 0x9f;
+		}
     }
 }
 

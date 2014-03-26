@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace scopely.msgpacksharp
 {
@@ -53,22 +54,33 @@ namespace scopely.msgpacksharp
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
                     bool asDictionary = buffer[0] >= MsgPackConstants.FixedMap.MIN && buffer[0] <= MsgPackConstants.FixedMap.MAX;
-					return (T)GetSerializer(typeof(T)).Deserialize(typeof(T), reader, asDictionary);
+					return (T)DeserializeObject(typeof(T), reader, asDictionary);
 				}
 			}
 		}
 
-		internal static object DeserializeObject(Type type, BinaryReader reader, bool asDictionary)
+		internal static object DeserializeObject(object o, BinaryReader reader, bool asDictionary)
 		{
-			return GetSerializer(type).Deserialize(type, reader, asDictionary);
+			if (o is IList)
+			{
+				SerializableProperty.DeserializeCollection((IList)o, reader, asDictionary);
+				return o;
+			}
+			else
+				return GetSerializer(o.GetType()).Deserialize(o, reader, asDictionary);
 		}
 
-		internal object Deserialize(Type type, BinaryReader reader, bool asDictionary)
+		internal static object DeserializeObject(Type type, BinaryReader reader, bool asDictionary)
 		{
 			ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
 			if (constructorInfo == null)
 				throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
 			object result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
+			return GetSerializer(type).Deserialize(result, reader, asDictionary);
+		}
+
+		internal object Deserialize(object result, BinaryReader reader, bool asDictionary)
+		{
 			foreach (SerializableProperty prop in props)
 			{
 				prop.Deserialize(result, reader, asDictionary);

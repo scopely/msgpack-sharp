@@ -87,8 +87,8 @@ namespace scopely.msgpacksharp
 					WriteMsgPack(writer, (long)(ulong)val);
 				}
 				else if (t == typeof(int) || t == typeof(uint) || t == typeof(short) ||
-					t == typeof(ushort) || t == typeof(long) ||
-					t == typeof(sbyte) || t == typeof(byte))
+				         t == typeof(ushort) || t == typeof(long) ||
+				         t == typeof(sbyte) || t == typeof(byte))
 				{
 					WriteMsgPack(writer, (long)val);
 				}
@@ -117,6 +117,24 @@ namespace scopely.msgpacksharp
 						}
 					}
 				}
+				else if (t.GetInterface("System.Collections.Generic.IList`1") != null)
+				{
+					if (val == null)
+					{
+						writer.Write((byte)0xc0);
+					}
+					else
+					{
+						//Type elementType = t.GetGenericArguments()[0];
+						IList list = val as IList;
+						if (list.Count <= 15)
+						{
+							byte header = (byte)(0x90 + list.Count);
+							writer.Write(header);
+							SerializeEnumerable(list.GetEnumerator(), writer, asDictionary);
+						}
+					}
+				}
 				else
 				{
 					MsgPackSerializer.SerializeObject(val, writer, asDictionary);
@@ -142,7 +160,24 @@ namespace scopely.msgpacksharp
 			SerializeValue(propInfo.GetValue(o, emptyObjArgs), writer, asDictionary);
 		}
 
-		internal object DeserializeValue(Type type, BinaryReader reader, bool asDictionary)
+		internal static void DeserializeCollection(IList collection, BinaryReader reader, bool asDictionary)
+		{
+			if (!collection.GetType().IsGenericType)
+				throw new NotSupportedException("Only generic List<T> lists are supported");
+			Type elementType = collection.GetType().GetGenericArguments()[0];
+			byte header = reader.ReadByte();
+			if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+			{
+				int numElements = header - MsgPackConstants.FixedArray.MIN;
+				for (int i = 0; i < numElements; i++)
+				{
+					object o = DeserializeValue(elementType, reader, asDictionary);
+					collection.Add(o);
+				}
+			}
+		}
+
+		internal static object DeserializeValue(Type type, BinaryReader reader, bool asDictionary)
 		{
 			object result = null;
 			if (type == typeof(string))
@@ -224,7 +259,11 @@ namespace scopely.msgpacksharp
 			}
 			else
 			{
-				result = MsgPackSerializer.DeserializeObject(type, reader, asDictionary);
+				ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
+				if (constructorInfo == null)
+					throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
+				result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
+				MsgPackSerializer.DeserializeObject(result, reader, asDictionary);
 			}
 			return result;
 		}
@@ -235,30 +274,48 @@ namespace scopely.msgpacksharp
 			{
 				throw new NotImplementedException();
 			}
-			propInfo.SetValue(o, DeserializeValue(ValueType, reader, asDictionary), emptyObjArgs);
+			object val = DeserializeValue(ValueType, reader, asDictionary);
+			try
+			{
+				Type t = o.GetType();
+				PropertyInfo pInfo = t.GetProperty(name);
+				if (pInfo == null)
+					throw new InvalidDataException();
+				pInfo.SetValue(o, val, emptyObjArgs);
+				//propInfo.SetValue(o, val, null);
+			}
+			catch(Exception ex)
+			{
+				if (val.GetType() != ValueType)
+				{
+					throw new InvalidDataException(ex.Message);
+				}
+				throw new InvalidDataException();
+			}
 		}
 
-		private float ReadMsgPackFloat(BinaryReader reader)
+		private static float ReadMsgPackFloat(BinaryReader reader)
 		{
-			reader.ReadByte(); // 0xca
+			if (reader.ReadByte() != 0xca)
+				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
 			return reader.ReadSingle();
 		}
 
-		private double ReadMsgPackDouble(BinaryReader reader)
+		private static double ReadMsgPackDouble(BinaryReader reader)
 		{
-			reader.ReadByte(); // 0xcb
+			if (reader.ReadByte() != 0xcb)
+				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
 			return reader.ReadDouble();
 		}
 
-		private ulong ReadMsgPackULong(BinaryReader reader)
+		private static ulong ReadMsgPackULong(BinaryReader reader)
 		{
-			byte header = reader.ReadByte();
-			if (header != 0xcf)
-				throw new InvalidDataException();
+			if (reader.ReadByte() != 0xcf)
+				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
 			return reader.ReadUInt64();
 		}
 
-		private long ReadMsgPackInt(BinaryReader reader)
+		private static long ReadMsgPackInt(BinaryReader reader)
 		{
 			byte header = reader.ReadByte();
 			long result = 0;
@@ -303,11 +360,11 @@ namespace scopely.msgpacksharp
 				result = reader.ReadInt64();
 			}
 			else
-				throw new InvalidDataException();
+				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
 			return result;
 		}
 
-		private string ReadMsgPackString(BinaryReader reader)
+		private static string ReadMsgPackString(BinaryReader reader)
 		{
 			string result = null;
 			int length = 0;
