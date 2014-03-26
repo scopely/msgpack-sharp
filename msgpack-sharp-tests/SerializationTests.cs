@@ -25,6 +25,9 @@ namespace scopely.msgpacksharp.tests
 			{
 				msg.SpotColors.Add(new AnimalColor() { Red = 1.0f, Green = 1.0f, Blue = 0.0f });
 			}
+			msg.Metadata = new Dictionary<string, string>();
+			msg.Metadata["Key1"] = "Value1";
+			msg.Metadata["Key2"] = "Value2";
 
 			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
@@ -52,6 +55,13 @@ namespace scopely.msgpacksharp.tests
 				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
 			}
 			Assert.IsEmpty(restored.MoreColors);
+
+			Assert.IsNotNull(restored.Metadata);
+			foreach (KeyValuePair<string,string> pair in msg.Metadata)
+			{
+				Assert.IsTrue(restored.Metadata.ContainsKey(pair.Key));
+				Assert.AreEqual(pair.Value, restored.Metadata[pair.Key]);
+			}
 		}
 	}
 }

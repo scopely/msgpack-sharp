@@ -25,5 +25,7 @@ namespace scopely.msgpacksharp.tests
 		public List<AnimalColor> SpotColors { get; set; }
 		[MsgPack(Sequence = 70)]
 		public List<AnimalColor> MoreColors { get; set; }
+		[MsgPack(Sequence = 100)]
+		public Dictionary<string,string> Metadata { get; set; }
 	}
 }
