@@ -135,6 +135,28 @@ namespace scopely.msgpacksharp
 						}
 					}
 				}
+				else if (t.GetInterface("System.Collections.Generic.IDictionary`2") != null)
+				{
+					if (val == null)
+					{
+						writer.Write((byte)0xc0);
+					}
+					else
+					{
+						IDictionary dictionary = val as IDictionary;
+						if (dictionary.Count <= 15)
+						{
+							byte header = (byte)(MsgPackConstants.FixedMap.MIN + dictionary.Count);
+							writer.Write(header);
+							IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
+							while (enumerator.MoveNext())
+							{
+								SerializeValue(enumerator.Key, writer, false);
+								SerializeValue(enumerator.Value, writer, asDictionary);
+							}
+						}
+					}
+				}
 				else
 				{
 					MsgPackSerializer.SerializeObject(val, writer, asDictionary);
@@ -173,6 +195,25 @@ namespace scopely.msgpacksharp
 				{
 					object o = DeserializeValue(elementType, reader, asDictionary);
 					collection.Add(o);
+				}
+			}
+		}
+
+		internal static void DeserializeCollection(IDictionary collection, BinaryReader reader, bool asDictionary)
+		{
+			if (!collection.GetType().IsGenericType)
+				throw new NotSupportedException("Only generic Dictionary<T,U> dictionaries are supported");
+			Type keyType = collection.GetType().GetGenericArguments()[0];
+			Type valueType = collection.GetType().GetGenericArguments()[1];
+			byte header = reader.ReadByte();
+			if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
+			{
+				int numElements = header - MsgPackConstants.FixedMap.MIN;
+				for (int i = 0; i < numElements; i++)
+				{
+					object key = DeserializeValue(keyType, reader, asDictionary);
+					object val = DeserializeValue(valueType, reader, asDictionary);
+					collection.Add(key, val);
 				}
 			}
 		}
@@ -275,23 +316,7 @@ namespace scopely.msgpacksharp
 				throw new NotImplementedException();
 			}
 			object val = DeserializeValue(ValueType, reader, asDictionary);
-			try
-			{
-				Type t = o.GetType();
-				PropertyInfo pInfo = t.GetProperty(name);
-				if (pInfo == null)
-					throw new InvalidDataException();
-				pInfo.SetValue(o, val, emptyObjArgs);
-				//propInfo.SetValue(o, val, null);
-			}
-			catch(Exception ex)
-			{
-				if (val.GetType() != ValueType)
-				{
-					throw new InvalidDataException(ex.Message);
-				}
-				throw new InvalidDataException();
-			}
+			propInfo.SetValue(o, val, emptyObjArgs);
 		}
 
 		private static float ReadMsgPackFloat(BinaryReader reader)

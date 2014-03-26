@@ -66,6 +66,11 @@ namespace scopely.msgpacksharp
 				SerializableProperty.DeserializeCollection((IList)o, reader, asDictionary);
 				return o;
 			}
+			else if (o is IDictionary)
+			{
+				SerializableProperty.DeserializeCollection((IDictionary)o, reader, asDictionary);
+				return o;
+			}
 			else
 				return GetSerializer(o.GetType()).Deserialize(o, reader, asDictionary);
 		}
