@@ -25,6 +25,11 @@ namespace scopely.msgpacksharp.tests
 			{
 				msg.SpotColors.Add(new AnimalColor() { Red = 1.0f, Green = 1.0f, Blue = 0.0f });
 			}
+			msg.ListOfInts = new List<int>();
+			for (int i = 0; i < 5; i++)
+			{
+				msg.ListOfInts.Add(i * 2);
+			}
 
 			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
@@ -52,6 +57,11 @@ namespace scopely.msgpacksharp.tests
 				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
 			}
 			Assert.IsEmpty(restored.MoreColors);
+			Assert.AreEqual(msg.ListOfInts.Count, restored.ListOfInts.Count);
+			for (int i = 0; i < msg.ListOfInts.Count; i++)
+			{
+				Assert.AreEqual(msg.ListOfInts[i], restored.ListOfInts[i]);
+			}
 		}
 	}
 }
