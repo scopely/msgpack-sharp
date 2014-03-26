@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
 using scopely.msgpacksharp.Extensions;
+using System.Collections.Generic;
 
 namespace scopely.msgpacksharp.tests
 {
@@ -19,10 +20,10 @@ namespace scopely.msgpacksharp.tests
 			msg.SomeNumbers = new int[5];
 			for (int i = 0; i < msg.SomeNumbers.Length; i++)
 				msg.SomeNumbers[i] = i * 2;
-			msg.SpotColors = new AnimalColor[3];
-			for (int i = 0; i < msg.SpotColors.Length; i++)
+			msg.SpotColors = new List<AnimalColor>();
+			for (int i = 0; i < 3; i++)
 			{
-				msg.SpotColors[i] = new AnimalColor() { Red = 1.0f, Green = 1.0f, Blue = 0.0f };
+				msg.SpotColors.Add(new AnimalColor() { Red = 1.0f, Green = 1.0f, Blue = 0.0f });
 			}
 
 			byte[] payload = msg.ToMsgPack();
@@ -45,11 +46,12 @@ namespace scopely.msgpacksharp.tests
 			{
 				Assert.AreEqual(msg.SomeNumbers[i], restored.SomeNumbers[i]);
 			}
-			Assert.AreEqual(msg.SpotColors.Length, restored.SpotColors.Length);
-			for (int i = 0; i < msg.SpotColors.Length; i++)
+			Assert.AreEqual(msg.SpotColors.Count, restored.SpotColors.Count);
+			for (int i = 0; i < msg.SpotColors.Count; i++)
 			{
 				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
 			}
+			Assert.IsEmpty(restored.MoreColors);
 		}
 	}
 }
