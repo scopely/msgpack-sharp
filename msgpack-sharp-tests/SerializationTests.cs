@@ -28,6 +28,11 @@ namespace scopely.msgpacksharp.tests
 			msg.Metadata = new Dictionary<string, string>();
 			msg.Metadata["Key1"] = "Value1";
 			msg.Metadata["Key2"] = "Value2";
+			msg.ListOfInts = new List<int>();
+			for (int i = 0; i < 5; i++)
+			{
+				msg.ListOfInts.Add(i * 2);
+			}
 
 			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
@@ -55,12 +60,16 @@ namespace scopely.msgpacksharp.tests
 				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
 			}
 			Assert.IsEmpty(restored.MoreColors);
-
 			Assert.IsNotNull(restored.Metadata);
 			foreach (KeyValuePair<string,string> pair in msg.Metadata)
 			{
 				Assert.IsTrue(restored.Metadata.ContainsKey(pair.Key));
 				Assert.AreEqual(pair.Value, restored.Metadata[pair.Key]);
+			}
+			Assert.AreEqual(msg.ListOfInts.Count, restored.ListOfInts.Count);
+			for (int i = 0; i < msg.ListOfInts.Count; i++)
+			{
+				Assert.AreEqual(msg.ListOfInts[i], restored.ListOfInts[i]);
 			}
 		}
 	}
