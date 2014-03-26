@@ -2,6 +2,8 @@
 using System.Reflection;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
+using System.Collections;
 
 namespace scopely.msgpacksharp
 {
@@ -37,39 +39,194 @@ namespace scopely.msgpacksharp
 
 		internal int Sequence { get; set; }
 
+		internal void SerializeValue(object val, BinaryWriter writer, bool asDictionary)
+		{
+			if (val == null)
+				writer.Write(MsgPackConstants.Formats.NIL);
+			else
+			{
+				Type t = val.GetType();
+				if (t == typeof(string))
+				{
+					WriteMsgPack(writer, (string)val);
+				}
+				else if (t == typeof(float) || t == typeof(Single))
+				{
+					WriteMsgPack(writer, (float)val);
+				}
+				else if (t == typeof(double) || t == typeof(Double))
+				{
+					WriteMsgPack(writer, (double)val);
+				}
+				else if (t == typeof(Byte))
+				{
+					WriteMsgPack(writer, (long)(byte)val);
+				}
+				else if (t == (typeof(Int16)))
+				{
+					WriteMsgPack(writer, (long)(short)val);
+				}
+				else if (t == (typeof(UInt16)))
+				{
+					WriteMsgPack(writer, (long)(ushort)val);
+				}
+				else if (t == (typeof(Int32)))
+				{
+					WriteMsgPack(writer, (long)(int)val);
+				}
+				else if (t == (typeof(UInt32)))
+				{
+					WriteMsgPack(writer, (long)(uint)val);
+				}
+				else if (t == (typeof(Int64)))
+				{
+					WriteMsgPack(writer, (long)val);
+				}
+				else if (t == (typeof(UInt64)))
+				{
+					WriteMsgPack(writer, (long)(ulong)val);
+				}
+				else if (t == typeof(int) || t == typeof(uint) || t == typeof(short) ||
+					t == typeof(ushort) || t == typeof(long) ||
+					t == typeof(sbyte) || t == typeof(byte))
+				{
+					WriteMsgPack(writer, (long)val);
+				}
+				else if (t == typeof(ulong))
+				{
+					WriteMsgPack(writer, (ulong)val);
+				}
+				else if (t == typeof(DateTime))
+				{
+					WriteMsgPack(writer, (DateTime)val);
+				}
+				else if (t.IsArray)
+				{
+					Array array = val as Array;
+					if (array == null)
+					{
+						writer.Write((byte)0xc0);
+					}
+					else
+					{
+						if (array.Length <= 15)
+						{
+							byte header = (byte)(0x90 + array.Length);
+							writer.Write(header);
+							SerializeEnumerable(array.GetEnumerator(), writer, asDictionary);
+						}
+					}
+				}
+				else
+				{
+					MsgPackSerializer.SerializeObject(val, writer, asDictionary);
+				}
+			}
+		}
+
+		internal void SerializeEnumerable(IEnumerator collection, BinaryWriter writer, bool asDictionary)
+		{
+			while (collection.MoveNext())
+			{
+				object val = collection.Current;
+				SerializeValue(val, writer, asDictionary);
+			}
+		}
+
 		internal void Serialize(object o, BinaryWriter writer, bool asDictionary)
 		{
 			if (asDictionary)
 			{
 				WriteMsgPack(writer, name);
 			}
-			if (ValueType == typeof(string))
+			SerializeValue(propInfo.GetValue(o, emptyObjArgs), writer, asDictionary);
+		}
+
+		internal object DeserializeValue(Type type, BinaryReader reader, bool asDictionary)
+		{
+			object result = null;
+			if (type == typeof(string))
 			{
-				WriteMsgPack(writer, PropInfo.GetValue(o, emptyObjArgs) as string);
+				result = ReadMsgPackString(reader);
 			}
-			else if (ValueType == typeof(float))
+			else if (type == typeof(int))
 			{
-				WriteMsgPack(writer, (float)PropInfo.GetValue(o, emptyObjArgs));
+				result = (int)ReadMsgPackInt(reader);
 			}
-			else if (ValueType == typeof(double))
+			else if (type == typeof(uint))
 			{
-				WriteMsgPack(writer, (double)PropInfo.GetValue(o, emptyObjArgs));
+				result = (uint)ReadMsgPackInt(reader);
 			}
-			else if (ValueType == typeof(int) || ValueType == typeof(uint) || ValueType == typeof(short) ||
-			         ValueType == typeof(ushort) || ValueType == typeof(long) || ValueType == typeof(ulong) ||
-			         ValueType == typeof(sbyte) || ValueType == typeof(byte))
+			else if (type == typeof(byte))
 			{
-				WriteMsgPack(writer, (long)PropInfo.GetValue(o, emptyObjArgs));
+				result = (byte)ReadMsgPackInt(reader);
 			}
-			else if (ValueType == typeof(DateTime))
+			else if (type == typeof(sbyte))
 			{
-				WriteMsgPack(writer, (DateTime)PropInfo.GetValue(o, emptyObjArgs));
+				result = (sbyte)ReadMsgPackInt(reader);
+			}
+			else if (type == typeof(short))
+			{
+				result = (short)ReadMsgPackInt(reader);
+			}
+			else if (type == typeof(ushort))
+			{
+				result = (ushort)ReadMsgPackInt(reader);
+			}
+			else if (type == typeof(long))
+			{
+				result = (long)ReadMsgPackInt(reader);
+			}
+			else if (type == typeof(ulong))
+			{
+				result = (ulong)ReadMsgPackInt(reader);
+			}
+			else if (type == typeof(float))
+			{
+				result = (float)ReadMsgPackFloat(reader);
+			}
+			else if (type == typeof(double))
+			{
+				result = (double)ReadMsgPackDouble(reader);
+			}
+			else if (type == typeof(DateTime))
+			{
+				ulong unixEpochTicks = ReadMsgPackULong(reader);
+				result = new DateTime((long)((unixEpochTicks - 621355968000000000Lu) * 10000Lu));
+			}
+			else if (type.IsArray)
+			{
+				byte header = reader.ReadByte();
+				int length = 0;
+				if (header >= 0x90 && header <= 0x9f)
+				{
+					length = header - 0x90;
+				}
+				if (type.GetElementType() == typeof(int))
+				{
+					int[] arr = new int[length];
+					for (int i = 0; i < length; i++)
+					{
+						arr[i] = (int)DeserializeValue(type.GetElementType(), reader, asDictionary);
+					}
+					result = arr;
+				}
+				else
+				{
+					Array array = Array.CreateInstance(type, length);
+					for (int i = 0; i < length; i++)
+					{
+						object thing = DeserializeValue(type.GetElementType(), reader, asDictionary);
+						array.SetValue(thing, i);
+					}
+					result = array;
+				}
 			}
 			else
 			{
-				//throw new InvalidDataException("Unsupported property type [" + valueType + "]");
-				MsgPackSerializer.SerializeObject(PropInfo.GetValue(o, emptyObjArgs), writer, asDictionary);
+				result = MsgPackSerializer.DeserializeObject(type, reader, asDictionary);
 			}
+			return result;
 		}
 
 		internal void Deserialize(object o, BinaryReader reader, bool asDictionary)
@@ -78,61 +235,7 @@ namespace scopely.msgpacksharp
 			{
 				throw new NotImplementedException();
 			}
-			if (ValueType == typeof(string))
-			{
-				propInfo.SetValue(o, ReadMsgPackString(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(int))
-			{
-				propInfo.SetValue(o, (int)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(uint))
-			{
-				propInfo.SetValue(o, (uint)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(byte))
-			{
-				propInfo.SetValue(o, (byte)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(sbyte))
-			{
-				propInfo.SetValue(o, (sbyte)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(short))
-			{
-				propInfo.SetValue(o, (short)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(ushort))
-			{
-				propInfo.SetValue(o, (ushort)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(long))
-			{
-				propInfo.SetValue(o, (long)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(ulong))
-			{
-				propInfo.SetValue(o, (ulong)ReadMsgPackInt(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(float))
-			{
-				propInfo.SetValue(o, (float)ReadMsgPackFloat(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(double))
-			{
-				propInfo.SetValue(o, (double)ReadMsgPackDouble(reader), emptyObjArgs);
-			}
-			else if (ValueType == typeof(DateTime))
-			{
-				ulong unixEpochTicks = ReadMsgPackULong(reader);
-				DateTime dateTime = new DateTime((long)((unixEpochTicks - 621355968000000000Lu) * 10000Lu));
-				propInfo.SetValue(o, dateTime, emptyObjArgs);
-			}
-			else
-			{
-				object newInstance = MsgPackSerializer.DeserializeObject(ValueType, reader, asDictionary);
-				propInfo.SetValue(o, newInstance, emptyObjArgs);
-			}
+			propInfo.SetValue(o, DeserializeValue(ValueType, reader, asDictionary), emptyObjArgs);
 		}
 
 		private float ReadMsgPackFloat(BinaryReader reader)
@@ -159,9 +262,9 @@ namespace scopely.msgpacksharp
 		{
 			byte header = reader.ReadByte();
 			long result = 0;
-            if (header < MsgPackConstants.FixedMap.MIN)
+			if (header < MsgPackConstants.FixedInteger.POSITIVE_MAX)
 			{
-				result = header & MsgPackConstants.FixedMap.MIN;
+				result = header;
 			}
             else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN)
 			{
