@@ -201,6 +201,8 @@ namespace scopely.msgpacksharp
 
 		internal static void DeserializeCollection(IDictionary collection, BinaryReader reader, bool asDictionary)
 		{
+			if (!collection.GetType().IsGenericType)
+				throw new NotSupportedException("Only generic Dictionary<T,U> dictionaries are supported");
 			Type keyType = collection.GetType().GetGenericArguments()[0];
 			Type valueType = collection.GetType().GetGenericArguments()[1];
 			byte header = reader.ReadByte();
