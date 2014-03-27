@@ -43,6 +43,7 @@
     <Compile Include="SerializableProperty.cs" />
     <Compile Include="MsgPackAttribute.cs" />
     <Compile Include="MsgPackConstants.cs" />
+    <Compile Include="MsgPackIO.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

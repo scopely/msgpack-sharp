@@ -9,7 +9,19 @@ namespace scopely.msgpacksharp.tests
 	public class SerializationTests
 	{
 		[Test]
-		public void TestRoundTrip()
+		public void TestRoundTripPrimitives()
+		{
+			int intVal = 0;
+			byte[] payload = intVal.ToMsgPack();
+			Assert.IsNotNull(payload);
+			Assert.AreNotEqual(0, payload.Length);
+
+			int restoredInt = MsgPackSerializer.Deserialize<int>(payload);
+			Assert.AreEqual(intVal, restoredInt);
+		}
+
+		[Test]
+		public void TestRoundTripComplexTypes()
 		{
 			AnimalMessage msg = new AnimalMessage();
 			msg.HeightInches = 7;

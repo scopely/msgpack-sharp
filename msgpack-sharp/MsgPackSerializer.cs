@@ -63,12 +63,12 @@ namespace scopely.msgpacksharp
 		{
 			if (o is IList)
 			{
-				SerializableProperty.DeserializeCollection((IList)o, reader, asDictionary);
+				MsgPackIO.DeserializeCollection((IList)o, reader, asDictionary);
 				return o;
 			}
 			else if (o is IDictionary)
 			{
-				SerializableProperty.DeserializeCollection((IDictionary)o, reader, asDictionary);
+				MsgPackIO.DeserializeCollection((IDictionary)o, reader, asDictionary);
 				return o;
 			}
 			else
@@ -77,11 +77,19 @@ namespace scopely.msgpacksharp
 
 		internal static object DeserializeObject(Type type, BinaryReader reader, bool asDictionary)
 		{
-			ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
-			if (constructorInfo == null)
-				throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
-			object result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
-			return GetSerializer(type).Deserialize(result, reader, asDictionary);
+			if (type.IsPrimitive || type == typeof(string) || type.GetInterface("") != null ||
+			    type.GetInterface("") != null)
+			{
+				return MsgPackIO.DeserializeValue(type, reader, asDictionary);
+			}
+			else
+			{
+				ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
+				if (constructorInfo == null)
+					throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
+				object result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
+				return GetSerializer(type).Deserialize(result, reader, asDictionary);
+			}
 		}
 
 		internal object Deserialize(object result, BinaryReader reader, bool asDictionary)
@@ -104,39 +112,49 @@ namespace scopely.msgpacksharp
 				writer.Write((byte)MsgPackConstants.Formats.NIL);
 			else
 			{
-				if (asDictionary)
+				if (serializedType.IsPrimitive || serializedType == typeof(string))
 				{
-					byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
-					writer.Write(val);
+					MsgPackIO.SerializeValue(o, writer, asDictionary);
 				}
-				foreach (SerializableProperty prop in props)
+				else
 				{
-					prop.Serialize(o, writer, asDictionary);
+					if (asDictionary)
+					{
+						byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
+						writer.Write(val);
+					}
+					foreach (SerializableProperty prop in props)
+					{
+						prop.Serialize(o, writer, asDictionary);
+					}
 				}
 			}
 		}
 
 		private void BuildMap()
         {
-            props = new List<SerializableProperty>();
-            foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                if (props.Count >= MsgPackConstants.MAX_PROPERTY_COUNT)
-                {
-                    string exceptionStr = string.Format("Only Types with {0} or fewer properties can be handled by MsgPack. You are trying to serialize a Type with more properties than that. Consider using a simpler DTO to wrap your payload.",
-                        MsgPackConstants.MAX_PROPERTY_COUNT);
-                    throw new IndexOutOfRangeException(exceptionStr);
-                }
-				foreach (object att in prop.GetCustomAttributes(true))
+			if (!serializedType.IsPrimitive && serializedType != typeof(string))
+			{
+				props = new List<SerializableProperty>();
+				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
-					MsgPackAttribute msgPackAttribute = att as MsgPackAttribute;
-					if (msgPackAttribute != null)
+					if (props.Count >= MsgPackConstants.MAX_PROPERTY_COUNT)
 					{
-						props.Add(new SerializableProperty(prop, msgPackAttribute.Sequence));
+						string exceptionStr = string.Format("Only Types with {0} or fewer properties can be handled by MsgPack. You are trying to serialize a Type with more properties than that. Consider using a simpler DTO to wrap your payload.",
+							                                    MsgPackConstants.MAX_PROPERTY_COUNT);
+						throw new IndexOutOfRangeException(exceptionStr);
+					}
+					foreach (object att in prop.GetCustomAttributes(true))
+					{
+						MsgPackAttribute msgPackAttribute = att as MsgPackAttribute;
+						if (msgPackAttribute != null)
+						{
+							props.Add(new SerializableProperty(prop, msgPackAttribute.Sequence));
+						}
 					}
 				}
+				props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));
 			}
-			props.Sort((x,y) => (x.Sequence.CompareTo(y.Sequence)));
 		}
 	}
 }
