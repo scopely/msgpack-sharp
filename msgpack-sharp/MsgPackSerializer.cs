@@ -94,6 +94,9 @@ namespace scopely.msgpacksharp
 
 		internal object Deserialize(object result, BinaryReader reader, bool asDictionary)
 		{
+			byte arrayHeader = reader.ReadByte();
+			if (arrayHeader < MsgPackConstants.FixedArray.MIN || arrayHeader > MsgPackConstants.FixedArray.MAX)
+				throw new InvalidDataException("All objects are expected to begin as arrays for their properties - the serialized data format isn't valid");
 			foreach (SerializableProperty prop in props)
 			{
 				prop.Deserialize(result, reader, asDictionary);
@@ -123,6 +126,8 @@ namespace scopely.msgpacksharp
 						byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
 						writer.Write(val);
 					}
+					byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + props.Count);
+					writer.Write(arrayVal);
 					foreach (SerializableProperty prop in props)
 					{
 						prop.Serialize(o, writer, asDictionary);

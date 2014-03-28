@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msgpack-sharp", "msgpack-sh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msgpack-sharp-tests", "msgpack-sharp-tests\msgpack-sharp-tests.csproj", "{0587C796-0B5E-4A36-B197-6C40232D4FD1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msgpack-sharp-verifier", "msgpack-sharp-verifier\msgpack-sharp-verifier.csproj", "{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{0587C796-0B5E-4A36-B197-6C40232D4FD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0587C796-0B5E-4A36-B197-6C40232D4FD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0587C796-0B5E-4A36-B197-6C40232D4FD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Release|Any CPU.ActiveCfg = Release|Any CPU
