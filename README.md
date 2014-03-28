@@ -4,7 +4,7 @@ A lightweight, high performance [MessagePack](http://msgpack.org/) framework for
 
 Usage
 =====
-This framework is purpose-built for moving DTO's around in a compact and fast way. Therefore, it requires that you specify the order of serialized properties so that we can avoid packing things like property names into payloads. The easiest way to do this framework is with annotations.
+This framework is purpose-built for moving DTO's around in a compact and fast way. Therefore, it requires that you specify the order of serialized properties so that we can avoid packing things like property names into payloads. The easiest way to do this is with annotations.
 
 ```c#
 // Declare your DTO/message class
