@@ -1,7 +1,7 @@
 Overview
 =============
 
-A lightweight, high performance msgpack framework for the CLR that works in constrained environments like AOT under Unity and Xamarin
+A lightweight, high performance [MessagePack](http://msgpack.org/) framework for the CLR that works in constrained environments like AOT under Unity and Xamarin.
 
 Usage
 =====
