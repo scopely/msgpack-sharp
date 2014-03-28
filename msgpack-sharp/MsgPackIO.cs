@@ -8,6 +8,8 @@ namespace scopely.msgpacksharp
 {
 	public static class MsgPackIO
 	{
+		private static readonly DateTime unixEpocUtc = new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc );
+
 		internal static void DeserializeCollection(IList collection, BinaryReader reader, bool asDictionary)
 		{
 			if (!collection.GetType().IsGenericType)
@@ -42,6 +44,16 @@ namespace scopely.msgpacksharp
 					collection.Add(key, val);
 				}
 			}
+		}
+
+		internal static long ToUnixMillis(DateTime dateTime)
+		{
+			return (long)dateTime.ToUniversalTime().Subtract(unixEpocUtc).TotalMilliseconds;
+		}
+
+		internal static DateTime ToDateTime(long value)
+		{
+			return unixEpocUtc.AddMilliseconds(value).ToLocalTime();
 		}
 
 		internal static object DeserializeValue(Type type, BinaryReader reader, bool asDictionary)
@@ -93,8 +105,8 @@ namespace scopely.msgpacksharp
 			}
 			else if (type == typeof(DateTime))
 			{
-				ulong unixEpochTicks = ReadMsgPackULong(reader);
-				result = new DateTime((long)((unixEpochTicks - 621355968000000000Lu) * 10000Lu));
+				long unixEpochTicks = ReadMsgPackInt(reader);
+				result = ToDateTime(unixEpochTicks);
 			}
 			else if (type.IsArray)
 			{
@@ -139,14 +151,20 @@ namespace scopely.msgpacksharp
 		{
 			if (reader.ReadByte() != 0xca)
 				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
-			return reader.ReadSingle();
+			byte[] data = reader.ReadBytes(4);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(data);
+			return BitConverter.ToSingle(data, 0);
 		}
 
 		internal static double ReadMsgPackDouble(BinaryReader reader)
 		{
 			if (reader.ReadByte() != 0xcb)
 				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
-			return reader.ReadDouble();
+			byte[] data = reader.ReadBytes(8);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(data);
+			return BitConverter.ToDouble(data, 0);
 		}
 
 		internal static ulong ReadMsgPackULong(BinaryReader reader)
@@ -174,15 +192,22 @@ namespace scopely.msgpacksharp
 			}
 			else if (header == MsgPackConstants.Formats.UINT_16)
 			{
-				result = reader.ReadByte() << 8 + reader.ReadByte();
+				result = reader.ReadByte() + reader.ReadByte() << 8;
 			}
 			else if (header == MsgPackConstants.Formats.UINT_32)
 			{
-				result = reader.ReadByte() << 24 + reader.ReadByte() << 16 + reader.ReadByte() << 8 + reader.ReadByte();
+				result = reader.ReadByte() + reader.ReadByte() << 8 + reader.ReadByte() << 16 + reader.ReadByte() << 24;
 			}
 			else if (header == MsgPackConstants.Formats.UINT_64)
 			{
-				result = (long)reader.ReadUInt64();
+				result = reader.ReadByte() +
+					reader.ReadByte() << 8 +
+					reader.ReadByte() << 16 +
+					reader.ReadByte() << 24 +
+					reader.ReadByte() << 32 +
+					reader.ReadByte() << 40 +
+					reader.ReadByte() << 48 +
+					reader.ReadByte() << 56;
 			}
 			else if (header == MsgPackConstants.Formats.INT_8)
 			{
@@ -190,15 +215,24 @@ namespace scopely.msgpacksharp
 			}
 			else if (header == MsgPackConstants.Formats.INT_16)
 			{
-				result = reader.ReadInt16();
+				byte[] data = reader.ReadBytes(2);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				result = BitConverter.ToInt16(data, 0);
 			}
 			else if (header == MsgPackConstants.Formats.INT_32)
 			{
-				result = reader.ReadInt32();
+				byte[] data = reader.ReadBytes(4);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				result = BitConverter.ToInt32(data, 0);
 			}
 			else if (header == MsgPackConstants.Formats.INT_64)
 			{
-				result = reader.ReadInt64();
+				byte[] data = reader.ReadBytes(8);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				result = BitConverter.ToInt64(data, 0);
 			}
 			else
 				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
@@ -220,11 +254,11 @@ namespace scopely.msgpacksharp
 			}
 			else if (header == MsgPackConstants.Formats.STR_16)
 			{
-				length = reader.ReadByte() << 8 + reader.ReadByte();
+				length = reader.ReadByte() + reader.ReadByte() << 8;
 			}
 			else if (header == MsgPackConstants.Formats.STR_32)
 			{
-				length = reader.ReadByte() << 24 + reader.ReadByte() << 16 + reader.ReadByte() << 8 + reader.ReadByte();
+				length = reader.ReadByte() + reader.ReadByte() << 8 + reader.ReadByte() << 16 + reader.ReadByte() << 24;
 			}
 			byte[] stringBuffer = reader.ReadBytes(length);
 			result = UTF8Encoding.UTF8.GetString(stringBuffer);
@@ -233,25 +267,119 @@ namespace scopely.msgpacksharp
 
 		internal static void WriteMsgPack(BinaryWriter writer, float val)
 		{
+			byte[] data = BitConverter.GetBytes(val);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(data);
 			writer.Write(MsgPackConstants.Formats.FLOAT_32);
-			writer.Write(val);
+			writer.Write(data);
 		}
 
 		internal static void WriteMsgPack(BinaryWriter writer, double val)
 		{
+			byte[] data = BitConverter.GetBytes(val);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(data);
 			writer.Write(MsgPackConstants.Formats.FLOAT_64);
-			writer.Write(val);
+			writer.Write(data);
 		}
 
 		internal static void WriteMsgPack(BinaryWriter writer, DateTime val)
 		{
-			ulong unixEpochTicks = ((ulong)val.Ticks / 10000Lu) + 621355968000000000Lu;
-			WriteMsgPack(writer, unixEpochTicks);
+			WriteMsgPack(writer, ToUnixMillis(val));
 		}
 
-		internal static void WriteMsgPack(BinaryWriter writer, long val)
+		internal static void WriteMsgPack(BinaryWriter writer, sbyte val)
 		{
-			if (val >= MsgPackConstants.FixedInteger.POSITIVE_MIN && val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			writer.Write(MsgPackConstants.Formats.INT_8);
+			writer.Write(val);
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, byte val)
+		{
+			writer.Write(MsgPackConstants.Formats.UINT_8);
+			writer.Write(val);
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, ushort val)
+		{
+			if (val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			{
+				writer.Write((byte)val);
+			}
+			else if (val <= Byte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_8);
+				writer.Write((byte)val);
+			}
+			else
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_16);
+				byte[] data = BitConverter.GetBytes(val);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, short val)
+		{
+			if (val >= 0 && val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			{
+				writer.Write((byte)val);
+			}
+			else if (val >= 0 && val <= byte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_8);
+				writer.Write((byte)val);
+			}
+			else if (val >= SByte.MinValue && val <= SByte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.INT_8);
+				writer.Write((sbyte)val);
+			}
+			else
+			{
+				writer.Write(MsgPackConstants.Formats.INT_16);
+				byte[] data = BitConverter.GetBytes(val);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, uint val)
+		{
+			if (val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			{
+				writer.Write((byte)val);
+			}
+			else if (val <= byte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_8);
+				writer.Write((byte)val);
+			}
+			else if (val <= UInt16.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_16);
+				ushort outVal = (ushort)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_32);
+				byte[] data = BitConverter.GetBytes(val);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, int val)
+		{
+			if (val >= 0 && val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
 			{
 				writer.Write((byte)val);
 			}
@@ -265,53 +393,133 @@ namespace scopely.msgpacksharp
 				writer.Write(MsgPackConstants.Formats.INT_8);
 				writer.Write((sbyte)val);
 			}
-			else if (val >= short.MinValue && val <= short.MaxValue)
+			else if (val >= Int16.MinValue && val <= Int16.MaxValue)
 			{
 				writer.Write(MsgPackConstants.Formats.INT_16);
-				writer.Write((short)val);
+				short outVal = (short)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
 			}
-			else if (val >= Int32.MinValue && val <= Int32.MaxValue)
-			{
-				writer.Write(MsgPackConstants.Formats.INT_32);
-				writer.Write((int)val);
-			}
-			else if (val < 0)
-			{
-				writer.Write(MsgPackConstants.Formats.INT_64);
-				writer.Write((long)val);
-			}
-			else if (val >= 0 && val <= ushort.MaxValue)
+			else if (val >= 0 && val <= UInt16.MaxValue)
 			{
 				writer.Write(MsgPackConstants.Formats.UINT_16);
-				writer.Write((byte)((val & 0xFF00) >> 8));
-				writer.Write((byte)(val & 0x00FF));
+				ushort outVal = (ushort)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
 			}
-			else if (val >= 0 && val <= UInt32.MaxValue)
+			else
 			{
-				writer.Write(MsgPackConstants.Formats.UINT_32);
-				writer.Write((byte)((val & 0xFF000000) >> 24));
-				writer.Write((byte)((val & 0x00FF0000) >> 16));
-				writer.Write((byte)((val & 0x0000FF00) >> 8));
-				writer.Write((byte)(val & 0x000000FF));
-			}
-			else if (val >= 0)
-			{
-				writer.Write(MsgPackConstants.Formats.UINT_64);
-				writer.Write((byte)(((ulong)val & 0xFF00000000000000) >> 56));
-				writer.Write((byte)(((ulong)val & 0x00FF000000000000) >> 48));
-				writer.Write((byte)(((ulong)val & 0x0000FF0000000000) >> 40));
-				writer.Write((byte)(((ulong)val & 0x000000FF00000000) >> 32));
-				writer.Write((byte)(((ulong)val & 0x00000000FF000000) >> 24));
-				writer.Write((byte)(((ulong)val & 0x0000000000FF0000) >> 16));
-				writer.Write((byte)(((ulong)val & 0x000000000000FF00) >> 8));
-				writer.Write((byte)(((ulong)val & 0x00000000000000FF)));
+				writer.Write(MsgPackConstants.Formats.INT_32);
+				byte[] data = BitConverter.GetBytes(val);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
 			}
 		}
 
 		internal static void WriteMsgPack(BinaryWriter writer, ulong val)
 		{
-			writer.Write((byte)0xcf);
-			writer.Write(val);
+			if (val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			{
+				writer.Write((byte)val);
+			}
+			else if (val <= byte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_8);
+				writer.Write((byte)val);
+			}
+			else if (val <= UInt16.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_16);
+				ushort outVal = (ushort)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else if (val <= UInt32.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_32);
+				uint outVal = (uint)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_64);
+				byte[] data = BitConverter.GetBytes(val);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, long val)
+		{
+			if (val >= 0 && val <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			{
+				writer.Write((byte)val);
+			}
+			else if (val >= 0 && val <= byte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_8);
+				writer.Write((byte)val);
+			}
+			else if (val >= sbyte.MinValue && val <= sbyte.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.INT_8);
+				writer.Write((sbyte)val);
+			}
+			else if (val >= Int16.MinValue && val <= Int16.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.INT_16);
+				short outVal = (short)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else if (val >= 0 && val <= UInt16.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_16);
+				ushort outVal = (ushort)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else if (val >= Int32.MinValue && val <= Int32.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.INT_32);
+				int outVal = (int)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else if (val >= 0 && val <= UInt32.MaxValue)
+			{
+				writer.Write(MsgPackConstants.Formats.UINT_32);
+				uint outVal = (uint)val;
+				byte[] data = BitConverter.GetBytes(outVal);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
+			else
+			{
+				writer.Write(MsgPackConstants.Formats.INT_64);
+				byte[] data = BitConverter.GetBytes(val);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				writer.Write(data);
+			}
 		}
 
 		internal static void WriteMsgPack(BinaryWriter writer, string s)
@@ -381,41 +589,31 @@ namespace scopely.msgpacksharp
 				{
 					WriteMsgPack(writer, (double)val);
 				}
-				else if (t == typeof(Byte))
+				else if (t == typeof(byte) || t == typeof(Byte))
 				{
-					WriteMsgPack(writer, (long)(byte)val);
+					WriteMsgPack(writer, (byte)val);
 				}
-				else if (t == (typeof(Int16)))
+				else if (t == typeof(short) || t == (typeof(Int16)))
 				{
-					WriteMsgPack(writer, (long)(short)val);
+					WriteMsgPack(writer, (short)val);
 				}
-				else if (t == (typeof(UInt16)))
+				else if (t == typeof(ushort) || t == (typeof(UInt16)))
 				{
-					WriteMsgPack(writer, (long)(ushort)val);
+					WriteMsgPack(writer, (ushort)val);
 				}
-				else if (t == (typeof(Int32)))
+				else if (t == typeof(int) || t == (typeof(Int32)))
 				{
-					WriteMsgPack(writer, (long)(int)val);
+					WriteMsgPack(writer, (int)val);
 				}
-				else if (t == (typeof(UInt32)))
+				else if (t == typeof(uint) || t == (typeof(UInt32)))
 				{
-					WriteMsgPack(writer, (long)(uint)val);
+					WriteMsgPack(writer, (uint)val);
 				}
-				else if (t == (typeof(Int64)))
-				{
-					WriteMsgPack(writer, (long)val);
-				}
-				else if (t == (typeof(UInt64)))
-				{
-					WriteMsgPack(writer, (long)(ulong)val);
-				}
-				else if (t == typeof(int) || t == typeof(uint) || t == typeof(short) ||
-					t == typeof(ushort) || t == typeof(long) ||
-					t == typeof(sbyte) || t == typeof(byte))
+				else if (t == typeof(long) || t == (typeof(Int64)))
 				{
 					WriteMsgPack(writer, (long)val);
 				}
-				else if (t == typeof(ulong))
+				else if (t == typeof(ulong) || t == (typeof(UInt64)))
 				{
 					WriteMsgPack(writer, (ulong)val);
 				}
