@@ -31,6 +31,25 @@ byte[] payload = msg.ToMsgPack();
 var restoredMsg = MsgPackSerializer.Deserialize<MyMessage>(payload);
 ```
 
+You can also directly (de)serialize primitives instead of a complex type as the top of the hierarchy:
+
+```c#
+var myStuff = new Dictionary<string,string>();
+myStuff["Foo"] = "bar";
+myStuff["Bar"] = "baz";
+byte[] payload = myStuff.ToMsgPack();
+
+float myNumber = 12.0f;
+byte[] payload = myNumber.ToMsgPack();
+```
+
+The framework is safe to use with Unity and Xamarin, even under AOT (e.g. for iOS).
+
+It uses reflection to discover the memory layout of classes for reading and writing with the MessagePack format, but it caches these reflections for fast access when repeatedly reusing the same Types. The small amount of reflection that is used is safe for Unity's subset of .NET.
+
 Scope and Limitations
 =============
-
+This framework is built to be fast and useful, not exhaustive. It supports any referential hierarchy of complex types (your own classes). But the only collections that it supports are `List<T>` and `Dictionary<T,U>`. It does not support raw arrays. It supports the following primitives:
+* Strings of any length
+* float and double
+* sbyte, byte, ushort, short, uint, int, ulong, long
