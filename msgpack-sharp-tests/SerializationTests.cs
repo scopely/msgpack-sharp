@@ -26,6 +26,30 @@ namespace scopely.msgpacksharp.tests
 		}
 
 		[Test]
+		public void TestLimits()
+		{
+			TestLimit(5);
+		}
+
+		private void TestLimit(int count)
+		{
+			var msg = new AnimalMessage();
+			msg.SpotColors = new List<AnimalColor>();
+			for (int i = 0; i < count; i++)
+				msg.SpotColors.Add(new AnimalColor() { Red = 1.0f });
+			byte[] payload = msg.ToMsgPack();
+
+			var restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
+			Assert.IsNotNull(restored.SpotColors);
+			Assert.AreEqual(msg.SpotColors.Count, restored.SpotColors.Count);
+
+			for (int i = 0; i < count; i++)
+			{
+				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
+			}
+		}
+
+		[Test]
 		public void TestRoundTripPrimitives()
 		{
 			int intVal = 0;
