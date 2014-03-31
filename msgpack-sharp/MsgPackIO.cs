@@ -239,15 +239,7 @@ namespace scopely.msgpacksharp
 
 		internal static long ReadMsgPackInt(BinaryReader reader)
 		{
-			byte header = 0;
-			try
-			{
-				header = reader.ReadByte();
-			}
-			catch(EndOfStreamException ex)
-			{
-				Console.Out.WriteLine(ex);
-			}
+			byte header = reader.ReadByte();
 			long result = 0;
 			if (header < MsgPackConstants.FixedInteger.POSITIVE_MAX)
 			{
