@@ -63,6 +63,12 @@ namespace scopely.msgpacksharp.tests
 		[MsgPack(Sequence = 90)]
 		public List<int> ListOfInts { get; set; }
 
+#if VERIFIER
+		[MessagePackMember( 10 )]
+#endif
+		[MsgPack(Sequence = 100)]
+		public Habitat CurrentHabitat { get; set; }
+
 		public static AnimalMessage CreateTestMessage()
 		{
 			AnimalMessage msg = new AnimalMessage();
@@ -87,6 +93,7 @@ namespace scopely.msgpacksharp.tests
 			{
 				msg.ListOfInts.Add(i * 2);
 			}
+			msg.CurrentHabitat = Habitat.Wild;
 			return msg;
 		}
 	}

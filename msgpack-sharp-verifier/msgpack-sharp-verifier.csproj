@@ -52,6 +52,9 @@
     <Compile Include="..\msgpack-sharp\MsgPackAttribute.cs">
       <Link>MsgPackAttribute.cs</Link>
     </Compile>
+    <Compile Include="..\msgpack-sharp-tests\Habitat.cs">
+      <Link>Habitat.cs</Link>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -110,6 +110,8 @@ namespace scopely.msgpacksharp.tests
 			{
 				Assert.AreEqual(msg.ListOfInts[i], restored.ListOfInts[i]);
 			}
+
+			Assert.AreEqual(msg.CurrentHabitat, restored.CurrentHabitat);
 		}
 	}
 }

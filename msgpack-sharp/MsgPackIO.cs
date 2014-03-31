@@ -139,16 +139,21 @@ namespace scopely.msgpacksharp
 			}
 			else if (type == typeof(float))
 			{
-				result = (float)ReadMsgPackFloat(reader);
+				result = ReadMsgPackFloat(reader);
 			}
 			else if (type == typeof(double))
 			{
-				result = (double)ReadMsgPackDouble(reader);
+				result = ReadMsgPackDouble(reader);
 			}
 			else if (type == typeof(DateTime))
 			{
 				long unixEpochTicks = ReadMsgPackInt(reader);
 				result = ToDateTime(unixEpochTicks);
+			}
+			else if (type.IsEnum)
+			{
+				string enumVal = ReadMsgPackString(reader);
+				result = Enum.Parse(type, enumVal);
 			}
 			else if (type.IsArray)
 			{
@@ -234,7 +239,15 @@ namespace scopely.msgpacksharp
 
 		internal static long ReadMsgPackInt(BinaryReader reader)
 		{
-			byte header = reader.ReadByte();
+			byte header = 0;
+			try
+			{
+				header = reader.ReadByte();
+			}
+			catch(EndOfStreamException ex)
+			{
+				Console.Out.WriteLine(ex);
+			}
 			long result = 0;
 			if (header < MsgPackConstants.FixedInteger.POSITIVE_MAX)
 			{
@@ -678,6 +691,10 @@ namespace scopely.msgpacksharp
 				else if (t == typeof(DateTime))
 				{
 					WriteMsgPack(writer, (DateTime)val);
+				}
+				else if (t.IsEnum)
+				{
+					WriteMsgPack(writer, Enum.GetName(t, val));
 				}
 				else if (t.IsArray)
 				{

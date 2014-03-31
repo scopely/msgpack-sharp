@@ -37,6 +37,7 @@
     <Compile Include="AnimalMessage.cs" />
     <Compile Include="AnimalColor.cs" />
     <Compile Include="SerializationTests.cs" />
+    <Compile Include="Habitat.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
