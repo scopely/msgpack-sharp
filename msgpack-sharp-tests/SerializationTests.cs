@@ -29,6 +29,7 @@ namespace scopely.msgpacksharp.tests
 		public void TestLimits()
 		{
 			TestLimit(5);
+			//TestLimit(20);
 		}
 
 		private void TestLimit(int count)

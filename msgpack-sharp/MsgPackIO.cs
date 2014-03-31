@@ -10,33 +10,74 @@ namespace scopely.msgpacksharp
 	{
 		private static readonly DateTime unixEpocUtc = new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc );
 
-		internal static void DeserializeCollection(IList collection, BinaryReader reader, bool asDictionary)
+		internal static bool DeserializeCollection(IList collection, BinaryReader reader, bool asDictionary)
 		{
+			bool isNull = true;
 			if (!collection.GetType().IsGenericType)
 				throw new NotSupportedException("Only generic List<T> lists are supported");
 			Type elementType = collection.GetType().GetGenericArguments()[0];
 			byte header = reader.ReadByte();
-			if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+			int numElements = 0;
+			if (header != MsgPackConstants.Formats.NIL)
 			{
-				int numElements = header - MsgPackConstants.FixedArray.MIN;
+				if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+				{
+					numElements = header - MsgPackConstants.FixedArray.MIN;
+				}
+				else if (header == MsgPackConstants.Formats.ARRAY_16)
+				{
+					numElements = reader.ReadByte() << 8 + reader.ReadByte();
+				}
+				else if (header == MsgPackConstants.Formats.ARRAY_32)
+				{
+					numElements = reader.ReadByte() << 24 +
+					reader.ReadByte() << 16 +
+					reader.ReadByte() << 8 +
+					reader.ReadByte();
+				}
+				else
+				{
+					throw new InvalidDataException("The serialized data format is invalid due to an invalid array size specification at offset " + reader.BaseStream.Position);
+				}
+				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
 					object o = DeserializeValue(elementType, reader, asDictionary);
 					collection.Add(o);
 				}
 			}
+			return isNull;
 		}
 
-		internal static void DeserializeCollection(IDictionary collection, BinaryReader reader, bool asDictionary)
+		internal static bool DeserializeCollection(IDictionary collection, BinaryReader reader, bool asDictionary)
 		{
+			bool isNull = true;
 			if (!collection.GetType().IsGenericType)
 				throw new NotSupportedException("Only generic Dictionary<T,U> dictionaries are supported");
 			Type keyType = collection.GetType().GetGenericArguments()[0];
 			Type valueType = collection.GetType().GetGenericArguments()[1];
 			byte header = reader.ReadByte();
-			if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
+			if (header != MsgPackConstants.Formats.NIL)
 			{
-				int numElements = header - MsgPackConstants.FixedMap.MIN;
+				int numElements = 0;
+				if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
+				{
+					numElements = header - MsgPackConstants.FixedMap.MIN;
+				}
+				else if (header == MsgPackConstants.Formats.MAP_16)
+				{
+					numElements = reader.ReadByte() << 8 + reader.ReadByte();
+				}
+				else if (header == MsgPackConstants.Formats.MAP_32)
+				{
+					numElements = reader.ReadByte() << 24 +
+					reader.ReadByte() << 16 +
+					reader.ReadByte() << 8 +
+					reader.ReadByte();
+				}
+				else
+					throw new InvalidDataException("The serialized data format is invalid due to an invalid map size specification");
+				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
 					object key = DeserializeValue(keyType, reader, asDictionary);
@@ -44,6 +85,7 @@ namespace scopely.msgpacksharp
 					collection.Add(key, val);
 				}
 			}
+			return isNull;
 		}
 
 		internal static long ToUnixMillis(DateTime dateTime)
@@ -112,9 +154,25 @@ namespace scopely.msgpacksharp
 			{
 				byte header = reader.ReadByte();
 				int length = 0;
-				if (header >= 0x90 && header <= 0x9f)
+				if (header != MsgPackConstants.Formats.NIL)
 				{
-					length = header - 0x90;
+					if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+					{
+						length = header - MsgPackConstants.FixedArray.MIN;
+					}
+					else if (header == MsgPackConstants.Formats.ARRAY_16)
+					{
+						length = reader.ReadByte() << 8 + reader.ReadByte();
+					}
+					else if (header == MsgPackConstants.Formats.ARRAY_32)
+					{
+						length = reader.ReadByte() << 24 +
+						reader.ReadByte() << 16 +
+						reader.ReadByte() << 8 +
+						reader.ReadByte();
+					}
+					else
+						throw new InvalidDataException("The serialized data format is invalid due to an invalid array size specification");
 				}
 				if (type.GetElementType() == typeof(int))
 				{
@@ -626,41 +684,72 @@ namespace scopely.msgpacksharp
 					Array array = val as Array;
 					if (array == null)
 					{
-						writer.Write((byte)0xc0);
+						writer.Write((byte)MsgPackConstants.Formats.NIL);
 					}
 					else
 					{
 						if (array.Length <= 15)
 						{
-							byte header = (byte)(0x90 + array.Length);
-							writer.Write(header);
-							SerializeEnumerable(array.GetEnumerator(), writer, asDictionary);
+							byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + array.Length);
+							writer.Write(arrayVal);
 						}
+						else if (array.Length <= UInt16.MaxValue)
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+							byte[] data = BitConverter.GetBytes((ushort)array.Length);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						else
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+							byte[] data = BitConverter.GetBytes((uint)array.Length);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						SerializeEnumerable(array.GetEnumerator(), writer, asDictionary);
 					}
 				}
 				else if (t.GetInterface("System.Collections.Generic.IList`1") != null)
 				{
 					if (val == null)
 					{
-						writer.Write((byte)0xc0);
+						writer.Write((byte)MsgPackConstants.Formats.NIL);
 					}
 					else
 					{
-						//Type elementType = t.GetGenericArguments()[0];
 						IList list = val as IList;
 						if (list.Count <= 15)
 						{
-							byte header = (byte)(0x90 + list.Count);
-							writer.Write(header);
-							SerializeEnumerable(list.GetEnumerator(), writer, asDictionary);
+							byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + list.Count);
+							writer.Write(arrayVal);
 						}
+						else if (list.Count <= UInt16.MaxValue)
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+							byte[] data = BitConverter.GetBytes((ushort)list.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						else
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+							byte[] data = BitConverter.GetBytes((uint)list.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						SerializeEnumerable(list.GetEnumerator(), writer, asDictionary);
 					}
 				}
 				else if (t.GetInterface("System.Collections.Generic.IDictionary`2") != null)
 				{
 					if (val == null)
 					{
-						writer.Write((byte)0xc0);
+						writer.Write((byte)MsgPackConstants.Formats.NIL);
 					}
 					else
 					{
@@ -669,12 +758,28 @@ namespace scopely.msgpacksharp
 						{
 							byte header = (byte)(MsgPackConstants.FixedMap.MIN + dictionary.Count);
 							writer.Write(header);
-							IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
-							while (enumerator.MoveNext())
-							{
-								SerializeValue(enumerator.Key, writer, false);
-								SerializeValue(enumerator.Value, writer, asDictionary);
-							}
+						}
+						else if (dictionary.Count <= UInt16.MaxValue)
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+							byte[] data = BitConverter.GetBytes((ushort)dictionary.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						else
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+							byte[] data = BitConverter.GetBytes((uint)dictionary.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
+						while (enumerator.MoveNext())
+						{
+							SerializeValue(enumerator.Key, writer, false);
+							SerializeValue(enumerator.Value, writer, asDictionary);
 						}
 					}
 				}
