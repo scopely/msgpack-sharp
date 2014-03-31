@@ -63,13 +63,17 @@ namespace scopely.msgpacksharp
 		{
 			if (o is IList)
 			{
-				MsgPackIO.DeserializeCollection((IList)o, reader, asDictionary);
-				return o;
+				if (MsgPackIO.DeserializeCollection((IList)o, reader, asDictionary))
+					return null;
+				else
+					return o;
 			}
 			else if (o is IDictionary)
 			{
-				MsgPackIO.DeserializeCollection((IDictionary)o, reader, asDictionary);
-				return o;
+				if (MsgPackIO.DeserializeCollection((IDictionary)o, reader, asDictionary))
+					return null;
+				else
+					return o;
 			}
 			else
 				return GetSerializer(o.GetType()).Deserialize(o, reader, asDictionary);
@@ -94,12 +98,34 @@ namespace scopely.msgpacksharp
 
 		internal object Deserialize(object result, BinaryReader reader, bool asDictionary)
 		{
-			byte arrayHeader = reader.ReadByte();
-			if (arrayHeader < MsgPackConstants.FixedArray.MIN || arrayHeader > MsgPackConstants.FixedArray.MAX)
-				throw new InvalidDataException("All objects are expected to begin as arrays for their properties - the serialized data format isn't valid");
-			foreach (SerializableProperty prop in props)
+			byte header = reader.ReadByte();
+			if (header == MsgPackConstants.Formats.NIL)
+				result = null;
+			else
 			{
-				prop.Deserialize(result, reader, asDictionary);
+				bool isArray = false;
+				if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+					isArray = true;
+				else if (header == MsgPackConstants.Formats.ARRAY_16)
+				{
+					isArray = true;
+					reader.ReadByte();
+					reader.ReadByte();
+				}
+				else if (header == MsgPackConstants.Formats.ARRAY_32)
+				{
+					isArray = true;
+					reader.ReadByte();
+					reader.ReadByte();
+					reader.ReadByte();
+					reader.ReadByte();
+				}
+				if (!isArray)
+					throw new InvalidDataException("All objects are expected to begin as arrays for their properties - the serialized data format isn't valid");
+				foreach (SerializableProperty prop in props)
+				{
+					prop.Deserialize(result, reader, asDictionary);
+				}
 			}
 			return result;
 		}
@@ -126,8 +152,27 @@ namespace scopely.msgpacksharp
 						byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
 						writer.Write(val);
 					}
-					byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + props.Count);
-					writer.Write(arrayVal);
+					if (props.Count <= 15)
+					{
+						byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + props.Count);
+						writer.Write(arrayVal);
+					}
+					else if (props.Count <= UInt16.MaxValue)
+					{
+						writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+						byte[] data = BitConverter.GetBytes((ushort)props.Count);
+						if (BitConverter.IsLittleEndian)
+							Array.Reverse(data);
+						writer.Write(data);
+					}
+					else
+					{
+						writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+						byte[] data = BitConverter.GetBytes((uint)props.Count);
+						if (BitConverter.IsLittleEndian)
+							Array.Reverse(data);
+						writer.Write(data);
+					}
 					foreach (SerializableProperty prop in props)
 					{
 						prop.Serialize(o, writer, asDictionary);
@@ -143,12 +188,6 @@ namespace scopely.msgpacksharp
 				props = new List<SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
-					if (props.Count >= MsgPackConstants.MAX_PROPERTY_COUNT)
-					{
-						string exceptionStr = string.Format("Only Types with {0} or fewer properties can be handled by MsgPack. You are trying to serialize a Type with more properties than that. Consider using a simpler DTO to wrap your payload.",
-							                                    MsgPackConstants.MAX_PROPERTY_COUNT);
-						throw new IndexOutOfRangeException(exceptionStr);
-					}
 					foreach (object att in prop.GetCustomAttributes(true))
 					{
 						MsgPackAttribute msgPackAttribute = att as MsgPackAttribute;
