@@ -81,8 +81,10 @@ namespace scopely.msgpacksharp
 
 		internal static object DeserializeObject(Type type, BinaryReader reader, bool asDictionary)
 		{
-			if (type.IsPrimitive || type == typeof(string) || type.GetInterface("") != null ||
-			    type.GetInterface("") != null)
+			if (type.IsPrimitive || 
+				type == typeof(string) || 
+				type.GetInterface("System.Collections.Generic.IList`1") != null ||
+				type.GetInterface("System.Collections.Generic.IDictionary`2") != null)
 			{
 				return MsgPackIO.DeserializeValue(type, reader, asDictionary);
 			}
@@ -141,7 +143,10 @@ namespace scopely.msgpacksharp
 				writer.Write((byte)MsgPackConstants.Formats.NIL);
 			else
 			{
-				if (serializedType.IsPrimitive || serializedType == typeof(string))
+				if (serializedType.IsPrimitive || 
+					serializedType == typeof(string) ||
+					serializedType.GetInterface("System.Collections.Generic.IDictionary`2") != null ||
+					serializedType.GetInterface("System.Collections.Generic.IList`1") != null)
 				{
 					MsgPackIO.SerializeValue(o, writer, asDictionary);
 				}
@@ -183,7 +188,10 @@ namespace scopely.msgpacksharp
 
 		private void BuildMap()
         {
-			if (!serializedType.IsPrimitive && serializedType != typeof(string))
+			if (!serializedType.IsPrimitive && 
+				serializedType != typeof(string) &&
+				serializedType.GetInterface("System.Collections.Generic.IList`1") == null &&
+				serializedType.GetInterface("System.Collections.Generic.IDictionary`2") == null)
 			{
 				props = new List<SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))

@@ -60,6 +60,16 @@ namespace scopely.msgpacksharp.tests
 
 			int restoredInt = MsgPackSerializer.Deserialize<int>(payload);
 			Assert.AreEqual(intVal, restoredInt);
+
+			var stuff = new Dictionary<string, string>();
+			stuff["Foo"] = "Value1";
+			stuff["Bar"] = "Value2";
+			payload = stuff.ToMsgPack();
+			Assert.IsNotNull(payload);
+			Assert.AreNotEqual(0, payload.Length);
+
+			var restoredStuff = MsgPackSerializer.Deserialize<Dictionary<string,string>>(payload);
+			Assert.AreEqual(stuff.Count, restoredStuff.Count);
 		}
 
 		[Test]
