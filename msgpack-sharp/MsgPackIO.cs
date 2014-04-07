@@ -10,7 +10,7 @@ namespace scopely.msgpacksharp
 	{
 		private static readonly DateTime unixEpocUtc = new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc );
 
-		internal static bool DeserializeCollection(IList collection, BinaryReader reader, bool asDictionary)
+		internal static bool DeserializeCollection(IList collection, BinaryReader reader)
 		{
 			bool isNull = true;
 			if (!collection.GetType().IsGenericType)
@@ -37,19 +37,19 @@ namespace scopely.msgpacksharp
 				}
 				else
 				{
-					throw new InvalidDataException("The serialized data format is invalid due to an invalid array size specification at offset " + reader.BaseStream.Position);
+					throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification at offset " + reader.BaseStream.Position);
 				}
 				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
-					object o = DeserializeValue(elementType, reader, asDictionary);
+					object o = DeserializeValue(elementType, reader);
 					collection.Add(o);
 				}
 			}
 			return isNull;
 		}
 
-		internal static bool DeserializeCollection(IDictionary collection, BinaryReader reader, bool asDictionary)
+		internal static bool DeserializeCollection(IDictionary collection, BinaryReader reader)
 		{
 			bool isNull = true;
 			if (!collection.GetType().IsGenericType)
@@ -76,12 +76,12 @@ namespace scopely.msgpacksharp
 					reader.ReadByte();
 				}
 				else
-					throw new InvalidDataException("The serialized data format is invalid due to an invalid map size specification");
+					throw new ApplicationException("The serialized data format is invalid due to an invalid map size specification");
 				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
-					object key = DeserializeValue(keyType, reader, asDictionary);
-					object val = DeserializeValue(valueType, reader, asDictionary);
+					object key = DeserializeValue(keyType, reader);
+					object val = DeserializeValue(valueType, reader);
 					collection.Add(key, val);
 				}
 			}
@@ -98,7 +98,7 @@ namespace scopely.msgpacksharp
 			return unixEpocUtc.AddMilliseconds(value).ToLocalTime();
 		}
 
-		internal static object DeserializeValue(Type type, BinaryReader reader, bool asDictionary)
+		internal static object DeserializeValue(Type type, BinaryReader reader)
 		{
 			object result = null;
 			if (type == typeof(string))
@@ -177,14 +177,14 @@ namespace scopely.msgpacksharp
 						reader.ReadByte();
 					}
 					else
-						throw new InvalidDataException("The serialized data format is invalid due to an invalid array size specification");
+						throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification");
 				}
 				if (type.GetElementType() == typeof(int))
 				{
 					int[] arr = new int[length];
 					for (int i = 0; i < length; i++)
 					{
-						arr[i] = (int)DeserializeValue(type.GetElementType(), reader, asDictionary);
+						arr[i] = (int)DeserializeValue(type.GetElementType(), reader);
 					}
 					result = arr;
 				}
@@ -193,7 +193,7 @@ namespace scopely.msgpacksharp
 					Array array = Array.CreateInstance(type, length);
 					for (int i = 0; i < length; i++)
 					{
-						object thing = DeserializeValue(type.GetElementType(), reader, asDictionary);
+						object thing = DeserializeValue(type.GetElementType(), reader);
 						array.SetValue(thing, i);
 					}
 					result = array;
@@ -203,9 +203,9 @@ namespace scopely.msgpacksharp
 			{
 				ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
 				if (constructorInfo == null)
-					throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
+					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
 				result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
-				MsgPackSerializer.DeserializeObject(result, reader, asDictionary);
+				MsgPackSerializer.DeserializeObject(result, reader);
 			}
 			return result;
 		}
@@ -213,7 +213,7 @@ namespace scopely.msgpacksharp
 		internal static float ReadMsgPackFloat(BinaryReader reader)
 		{
 			if (reader.ReadByte() != 0xca)
-				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
+				throw new ApplicationException("Serialized data doesn't match type being deserialized to");
 			byte[] data = reader.ReadBytes(4);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(data);
@@ -223,7 +223,7 @@ namespace scopely.msgpacksharp
 		internal static double ReadMsgPackDouble(BinaryReader reader)
 		{
 			if (reader.ReadByte() != 0xcb)
-				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
+				throw new ApplicationException("Serialized data doesn't match type being deserialized to");
 			byte[] data = reader.ReadBytes(8);
 			if (BitConverter.IsLittleEndian)
 				Array.Reverse(data);
@@ -298,7 +298,7 @@ namespace scopely.msgpacksharp
 				result = BitConverter.ToInt64(data, 0);
 			}
 			else
-				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
+				throw new ApplicationException("Serialized data doesn't match type being deserialized to");
 			return result;
 		}
 
@@ -624,16 +624,16 @@ namespace scopely.msgpacksharp
 			}
 		}
 			
-		internal static void SerializeEnumerable(IEnumerator collection, BinaryWriter writer, bool asDictionary)
+		internal static void SerializeEnumerable(IEnumerator collection, BinaryWriter writer)
 		{
 			while (collection.MoveNext())
 			{
 				object val = collection.Current;
-				SerializeValue(val, writer, asDictionary);
+				SerializeValue(val, writer);
 			}
 		}
 			
-		internal static void SerializeValue(object val, BinaryWriter writer, bool asDictionary)
+		internal static void SerializeValue(object val, BinaryWriter writer)
 		{
 			if (val == null)
 				writer.Write(MsgPackConstants.Formats.NIL);
@@ -718,7 +718,7 @@ namespace scopely.msgpacksharp
 								Array.Reverse(data);
 							writer.Write(data);
 						}
-						SerializeEnumerable(array.GetEnumerator(), writer, asDictionary);
+						SerializeEnumerable(array.GetEnumerator(), writer);
 					}
 				}
 				else if (t.GetInterface("System.Collections.Generic.IList`1") != null)
@@ -751,7 +751,7 @@ namespace scopely.msgpacksharp
 								Array.Reverse(data);
 							writer.Write(data);
 						}
-						SerializeEnumerable(list.GetEnumerator(), writer, asDictionary);
+						SerializeEnumerable(list.GetEnumerator(), writer);
 					}
 				}
 				else if (t.GetInterface("System.Collections.Generic.IDictionary`2") != null)
@@ -787,14 +787,14 @@ namespace scopely.msgpacksharp
 						IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
 						while (enumerator.MoveNext())
 						{
-							SerializeValue(enumerator.Key, writer, false);
-							SerializeValue(enumerator.Value, writer, asDictionary);
+							SerializeValue(enumerator.Key, writer);
+							SerializeValue(enumerator.Value, writer);
 						}
 					}
 				}
 				else
 				{
-					MsgPackSerializer.SerializeObject(val, writer, asDictionary);
+					MsgPackSerializer.SerializeObject(val, writer);
 				}
 			}
 		}

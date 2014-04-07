@@ -39,23 +39,15 @@ namespace scopely.msgpacksharp
 
 		internal int Sequence { get; set; }
 
-		internal void Serialize(object o, BinaryWriter writer, bool asDictionary)
+		internal void Serialize(object o, BinaryWriter writer)
 		{
-			if (asDictionary)
-			{
-				MsgPackIO.WriteMsgPack(writer, name);
-			}
-			MsgPackIO.SerializeValue(propInfo.GetValue(o, emptyObjArgs), writer, asDictionary);
+			MsgPackIO.SerializeValue(propInfo.GetValue(o, emptyObjArgs), writer);
 		}
 
 
-		internal void Deserialize(object o, BinaryReader reader, bool asDictionary)
+		internal void Deserialize(object o, BinaryReader reader)
 		{
-			if (asDictionary)
-			{
-				throw new NotImplementedException();
-			}
-			object val = MsgPackIO.DeserializeValue(ValueType, reader, asDictionary);
+			object val = MsgPackIO.DeserializeValue(ValueType, reader);
 			propInfo.SetValue(o, val, emptyObjArgs);
 		}
 

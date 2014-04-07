@@ -28,19 +28,19 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		public static byte[] SerializeObject(object o, bool asDictionary = false)
+		public static byte[] SerializeObject(object o)
 		{
-			return GetSerializer(o.GetType()).Serialize(o, asDictionary);
+			return GetSerializer(o.GetType()).Serialize(o);
 		}
 
-		public byte[] Serialize(object o, bool asDictionary = false)
+		public byte[] Serialize(object o)
 		{
 			byte[] result = null;
 			using (MemoryStream stream = new MemoryStream())
 			{
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
-					Serialize(o, writer, asDictionary);
+					Serialize(o, writer);
 					result = stream.ToArray();
 				}
 			}
@@ -53,52 +53,51 @@ namespace scopely.msgpacksharp
 			{
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
-                    bool asDictionary = buffer[0] >= MsgPackConstants.FixedMap.MIN && buffer[0] <= MsgPackConstants.FixedMap.MAX;
-					return (T)DeserializeObject(typeof(T), reader, asDictionary);
+					return (T)DeserializeObject(typeof(T), reader);
 				}
 			}
 		}
 
-		internal static object DeserializeObject(object o, BinaryReader reader, bool asDictionary)
+		internal static object DeserializeObject(object o, BinaryReader reader)
 		{
 			if (o is IList)
 			{
-				if (MsgPackIO.DeserializeCollection((IList)o, reader, asDictionary))
+				if (MsgPackIO.DeserializeCollection((IList)o, reader))
 					return null;
 				else
 					return o;
 			}
 			else if (o is IDictionary)
 			{
-				if (MsgPackIO.DeserializeCollection((IDictionary)o, reader, asDictionary))
+				if (MsgPackIO.DeserializeCollection((IDictionary)o, reader))
 					return null;
 				else
 					return o;
 			}
 			else
-				return GetSerializer(o.GetType()).Deserialize(o, reader, asDictionary);
+				return GetSerializer(o.GetType()).Deserialize(o, reader);
 		}
 
-		internal static object DeserializeObject(Type type, BinaryReader reader, bool asDictionary)
+		internal static object DeserializeObject(Type type, BinaryReader reader)
 		{
 			if (type.IsPrimitive || 
 				type == typeof(string) || 
 				type.GetInterface("System.Collections.Generic.IList`1") != null ||
 				type.GetInterface("System.Collections.Generic.IDictionary`2") != null)
 			{
-				return MsgPackIO.DeserializeValue(type, reader, asDictionary);
+				return MsgPackIO.DeserializeValue(type, reader);
 			}
 			else
 			{
 				ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
 				if (constructorInfo == null)
-					throw new InvalidDataException("Can't deserialize Type [" + type + "] because it has no default constructor");
+					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
 				object result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
-				return GetSerializer(type).Deserialize(result, reader, asDictionary);
+				return GetSerializer(type).Deserialize(result, reader);
 			}
 		}
 
-		internal object Deserialize(object result, BinaryReader reader, bool asDictionary)
+		internal object Deserialize(object result, BinaryReader reader)
 		{
 			byte header = reader.ReadByte();
 			if (header == MsgPackConstants.Formats.NIL)
@@ -123,21 +122,21 @@ namespace scopely.msgpacksharp
 					reader.ReadByte();
 				}
 				if (!isArray)
-					throw new InvalidDataException("All objects are expected to begin as arrays for their properties - the serialized data format isn't valid");
+					throw new ApplicationException("All objects are expected to begin as arrays for their properties - the serialized data format isn't valid");
 				foreach (SerializableProperty prop in props)
 				{
-					prop.Deserialize(result, reader, asDictionary);
+					prop.Deserialize(result, reader);
 				}
 			}
 			return result;
 		}
 
-		internal static void SerializeObject(object o, BinaryWriter writer, bool asDictionary)
+		internal static void SerializeObject(object o, BinaryWriter writer)
 		{
-			GetSerializer(o.GetType()).Serialize(o, writer, asDictionary);
+			GetSerializer(o.GetType()).Serialize(o, writer);
 		}
 
-		private void Serialize(object o, BinaryWriter writer, bool asDictionary)
+		private void Serialize(object o, BinaryWriter writer)
 		{
 			if (o == null)
 				writer.Write((byte)MsgPackConstants.Formats.NIL);
@@ -148,15 +147,10 @@ namespace scopely.msgpacksharp
 					serializedType.GetInterface("System.Collections.Generic.IDictionary`2") != null ||
 					serializedType.GetInterface("System.Collections.Generic.IList`1") != null)
 				{
-					MsgPackIO.SerializeValue(o, writer, asDictionary);
+					MsgPackIO.SerializeValue(o, writer);
 				}
 				else
 				{
-					if (asDictionary)
-					{
-						byte val = (byte)(MsgPackConstants.FixedMap.MIN | props.Count);
-						writer.Write(val);
-					}
 					if (props.Count <= 15)
 					{
 						byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + props.Count);
@@ -180,7 +174,7 @@ namespace scopely.msgpacksharp
 					}
 					foreach (SerializableProperty prop in props)
 					{
-						prop.Serialize(o, writer, asDictionary);
+						prop.Serialize(o, writer);
 					}
 				}
 			}
