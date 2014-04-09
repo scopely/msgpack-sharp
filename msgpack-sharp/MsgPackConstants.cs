@@ -68,6 +68,12 @@ namespace scopely.msgpacksharp
 			public const byte MIN = 0x90;
 			public const byte MAX = 0x9f;
 		}
+
+		public static class Bool
+		{
+			public const byte FALSE = 0xc2;
+			public const byte TRUE = 0xc3;
+		}
     }
 }
 

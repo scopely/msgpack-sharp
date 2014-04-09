@@ -90,6 +90,7 @@ namespace scopely.msgpacksharp.tests
 		private void VerifyAnimalMessage(AnimalMessage msg, AnimalMessage restored)
 		{
 			Assert.IsNotNull(restored);
+			Assert.AreEqual(msg.IsAlive, restored.IsAlive);
 			Assert.AreEqual(msg.HeightInches, restored.HeightInches);
 			Assert.AreEqual(msg.AnimalKind, restored.AnimalKind);
 			Assert.AreEqual(msg.AnimalName, restored.AnimalName);

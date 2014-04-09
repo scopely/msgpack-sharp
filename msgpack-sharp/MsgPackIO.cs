@@ -145,6 +145,10 @@ namespace scopely.msgpacksharp
 			{
 				result = ReadMsgPackDouble(reader);
 			}
+			else if (type == typeof(Boolean) || type == typeof(bool))
+			{
+				result = ReadMsgPackBoolean(reader);
+			}
 			else if (type == typeof(DateTime))
 			{
 				long unixEpochTicks = ReadMsgPackInt(reader);
@@ -208,6 +212,11 @@ namespace scopely.msgpacksharp
 				MsgPackSerializer.DeserializeObject(result, reader);
 			}
 			return result;
+		}
+
+		internal static bool ReadMsgPackBoolean(BinaryReader reader)
+		{
+			return reader.ReadByte() == MsgPackConstants.Bool.TRUE ? true : false;
 		}
 
 		internal static float ReadMsgPackFloat(BinaryReader reader)
@@ -326,6 +335,14 @@ namespace scopely.msgpacksharp
 			byte[] stringBuffer = reader.ReadBytes(length);
 			result = UTF8Encoding.UTF8.GetString(stringBuffer);
 			return result;
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, bool val)
+		{
+			if (val)
+				writer.Write(MsgPackConstants.Bool.TRUE);
+			else
+				writer.Write(MsgPackConstants.Bool.FALSE);
 		}
 
 		internal static void WriteMsgPack(BinaryWriter writer, float val)
@@ -679,6 +696,10 @@ namespace scopely.msgpacksharp
 				else if (t == typeof(ulong) || t == (typeof(UInt64)))
 				{
 					WriteMsgPack(writer, (ulong)val);
+				}
+				else if (t == typeof(bool) || t == (typeof(Boolean)))
+				{
+					WriteMsgPack(writer, (bool)val);
 				}
 				else if (t == typeof(DateTime))
 				{
