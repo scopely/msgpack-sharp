@@ -74,6 +74,12 @@ namespace scopely.msgpacksharp.tests
 		[MsgPack(Sequence = 100)]
 		public Habitat CurrentHabitat { get; set; }
 
+#if VERIFIER
+		[MessagePackMember( 12 )]
+#endif
+		[MsgPack(Sequence = 110)]
+		public string TheLongString { get; set; }
+
 		public static AnimalMessage CreateTestMessage()
 		{
 			AnimalMessage msg = new AnimalMessage();
@@ -100,6 +106,13 @@ namespace scopely.msgpacksharp.tests
 				msg.ListOfInts.Add(i * 2);
 			}
 			msg.CurrentHabitat = Habitat.Wild;
+
+			msg.TheLongString = String.Empty;
+			for (int i = 0; i < 257; i++)
+			{
+				msg.TheLongString += "+";
+			}
+
 			return msg;
 		}
 	}

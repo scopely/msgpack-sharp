@@ -26,14 +26,15 @@ namespace scopely.msgpacksharp
 				}
 				else if (header == MsgPackConstants.Formats.ARRAY_16)
 				{
-					numElements = reader.ReadByte() << 8 + reader.ReadByte();
+					numElements = reader.ReadByte() + 
+						(reader.ReadByte() << 8);
 				}
 				else if (header == MsgPackConstants.Formats.ARRAY_32)
 				{
-					numElements = reader.ReadByte() << 24 +
-					reader.ReadByte() << 16 +
-					reader.ReadByte() << 8 +
-					reader.ReadByte();
+					numElements = reader.ReadByte() +
+						(reader.ReadByte() << 8) +
+						(reader.ReadByte() << 16) +
+						(reader.ReadByte() << 24);
 				}
 				else
 				{
@@ -66,14 +67,15 @@ namespace scopely.msgpacksharp
 				}
 				else if (header == MsgPackConstants.Formats.MAP_16)
 				{
-					numElements = reader.ReadByte() << 8 + reader.ReadByte();
+					numElements = reader.ReadByte() + 
+						(reader.ReadByte() << 8);
 				}
 				else if (header == MsgPackConstants.Formats.MAP_32)
 				{
-					numElements = reader.ReadByte() << 24 +
-					reader.ReadByte() << 16 +
-					reader.ReadByte() << 8 +
-					reader.ReadByte();
+					numElements = reader.ReadByte() +
+						(reader.ReadByte() << 8) +
+						(reader.ReadByte() << 16) +
+						(reader.ReadByte() << 24);
 				}
 				else
 					throw new ApplicationException("The serialized data format is invalid due to an invalid map size specification");
@@ -171,14 +173,15 @@ namespace scopely.msgpacksharp
 					}
 					else if (header == MsgPackConstants.Formats.ARRAY_16)
 					{
-						length = reader.ReadByte() << 8 + reader.ReadByte();
+						length = reader.ReadByte() + 
+							(reader.ReadByte() << 8);
 					}
 					else if (header == MsgPackConstants.Formats.ARRAY_32)
 					{
-						length = reader.ReadByte() << 24 +
-						reader.ReadByte() << 16 +
-						reader.ReadByte() << 8 +
-						reader.ReadByte();
+						length = reader.ReadByte() +
+							(reader.ReadByte() << 8) +
+							(reader.ReadByte() << 16) +
+							(reader.ReadByte() << 24);
 					}
 					else
 						throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification");
@@ -264,22 +267,26 @@ namespace scopely.msgpacksharp
 			}
 			else if (header == MsgPackConstants.Formats.UINT_16)
 			{
-				result = reader.ReadByte() + reader.ReadByte() << 8;
+				result = reader.ReadByte() + 
+					(reader.ReadByte() << 8);
 			}
 			else if (header == MsgPackConstants.Formats.UINT_32)
 			{
-				result = reader.ReadByte() + reader.ReadByte() << 8 + reader.ReadByte() << 16 + reader.ReadByte() << 24;
+				result = reader.ReadByte() + 
+					(reader.ReadByte() << 8) + 
+					(reader.ReadByte() << 16) + 
+					(reader.ReadByte() << 24);
 			}
 			else if (header == MsgPackConstants.Formats.UINT_64)
 			{
 				result = reader.ReadByte() +
-					reader.ReadByte() << 8 +
-					reader.ReadByte() << 16 +
-					reader.ReadByte() << 24 +
-					reader.ReadByte() << 32 +
-					reader.ReadByte() << 40 +
-					reader.ReadByte() << 48 +
-					reader.ReadByte() << 56;
+					(reader.ReadByte() << 8) +
+					(reader.ReadByte() << 16) +
+					(reader.ReadByte() << 24) +
+					(reader.ReadByte() << 32) +
+					(reader.ReadByte() << 40) +
+					(reader.ReadByte() << 48) +
+					(reader.ReadByte() << 56);
 			}
 			else if (header == MsgPackConstants.Formats.INT_8)
 			{
@@ -316,24 +323,31 @@ namespace scopely.msgpacksharp
 			string result = null;
 			int length = 0;
 			byte header = reader.ReadByte();
-			if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
+			if (header != MsgPackConstants.Formats.NIL)
 			{
-				length = header - MsgPackConstants.FixedString.MIN;
+				if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
+				{
+					length = header - MsgPackConstants.FixedString.MIN;
+				}
+				else if (header == MsgPackConstants.Formats.STR_8)
+				{
+					length = reader.ReadByte();
+				}
+				else if (header == MsgPackConstants.Formats.STR_16)
+				{
+					length = reader.ReadByte() + 
+						(reader.ReadByte() << 8);
+				}
+				else if (header == MsgPackConstants.Formats.STR_32)
+				{
+					length = reader.ReadByte() + 
+						(reader.ReadByte() << 8) + 
+						(reader.ReadByte() << 16) + 
+						(reader.ReadByte() << 24);
+				}
+				byte[] stringBuffer = reader.ReadBytes(length);
+				result = UTF8Encoding.UTF8.GetString(stringBuffer);
 			}
-			else if (header == MsgPackConstants.Formats.STR_8)
-			{
-				length = reader.ReadByte();
-			}
-			else if (header == MsgPackConstants.Formats.STR_16)
-			{
-				length = reader.ReadByte() + reader.ReadByte() << 8;
-			}
-			else if (header == MsgPackConstants.Formats.STR_32)
-			{
-				length = reader.ReadByte() + reader.ReadByte() << 8 + reader.ReadByte() << 16 + reader.ReadByte() << 24;
-			}
-			byte[] stringBuffer = reader.ReadBytes(length);
-			result = UTF8Encoding.UTF8.GetString(stringBuffer);
 			return result;
 		}
 
@@ -623,16 +637,20 @@ namespace scopely.msgpacksharp
 				else if (length <= ushort.MaxValue)
 				{
 					writer.Write(MsgPackConstants.Formats.STR_16);
-					writer.Write((byte)((length | 0xFF00) >> 8));
-					writer.Write((byte)(length | 0x00FF));
+					ushort outVal = (ushort)length;
+					byte[] data = BitConverter.GetBytes(outVal);
+					if (BitConverter.IsLittleEndian)
+						Array.Reverse(data);
+					writer.Write(data);
 				}
 				else
 				{
 					writer.Write(MsgPackConstants.Formats.STR_32);
-					writer.Write((byte)((length | 0xFF000000) >> 24));
-					writer.Write((byte)((length | 0x00FF0000) >> 16));
-					writer.Write((byte)((length | 0x0000FF00) >> 8));
-					writer.Write((byte)( length | 0x000000FF));
+					uint outVal = (uint)length;
+					byte[] data = BitConverter.GetBytes(outVal);
+					if (BitConverter.IsLittleEndian)
+						Array.Reverse(data);
+					writer.Write(data);
 				}
 				for (int i = 0; i < utf8Bytes.Length; i++)
 				{

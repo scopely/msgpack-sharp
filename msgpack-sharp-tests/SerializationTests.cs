@@ -123,6 +123,7 @@ namespace scopely.msgpacksharp.tests
 			}
 
 			Assert.AreEqual(msg.CurrentHabitat, restored.CurrentHabitat);
+			Assert.AreEqual(msg.TheLongString, restored.TheLongString);
 		}
 	}
 }
