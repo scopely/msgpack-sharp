@@ -26,15 +26,15 @@ namespace scopely.msgpacksharp
 				}
 				else if (header == MsgPackConstants.Formats.ARRAY_16)
 				{
-					numElements = reader.ReadByte() + 
-						(reader.ReadByte() << 8);
+					numElements = (reader.ReadByte() << 8) + 
+						reader.ReadByte();
 				}
 				else if (header == MsgPackConstants.Formats.ARRAY_32)
 				{
-					numElements = reader.ReadByte() +
-						(reader.ReadByte() << 8) +
+					numElements = (reader.ReadByte() << 24) +
 						(reader.ReadByte() << 16) +
-						(reader.ReadByte() << 24);
+						(reader.ReadByte() << 8) +
+						reader.ReadByte();
 				}
 				else
 				{
@@ -67,15 +67,15 @@ namespace scopely.msgpacksharp
 				}
 				else if (header == MsgPackConstants.Formats.MAP_16)
 				{
-					numElements = reader.ReadByte() + 
-						(reader.ReadByte() << 8);
+					numElements = (reader.ReadByte() << 8) + 
+						reader.ReadByte();
 				}
 				else if (header == MsgPackConstants.Formats.MAP_32)
 				{
-					numElements = reader.ReadByte() +
-						(reader.ReadByte() << 8) +
+					numElements = (reader.ReadByte() << 24) +
 						(reader.ReadByte() << 16) +
-						(reader.ReadByte() << 24);
+						(reader.ReadByte() << 8) +
+						reader.ReadByte();
 				}
 				else
 					throw new ApplicationException("The serialized data format is invalid due to an invalid map size specification");
@@ -173,15 +173,15 @@ namespace scopely.msgpacksharp
 					}
 					else if (header == MsgPackConstants.Formats.ARRAY_16)
 					{
-						length = reader.ReadByte() + 
-							(reader.ReadByte() << 8);
+						length = (reader.ReadByte() << 8)+ 
+							reader.ReadByte();
 					}
 					else if (header == MsgPackConstants.Formats.ARRAY_32)
 					{
-						length = reader.ReadByte() +
-							(reader.ReadByte() << 8) +
+						length = (reader.ReadByte() << 24) +
 							(reader.ReadByte() << 16) +
-							(reader.ReadByte() << 24);
+							(reader.ReadByte() << 8) +
+							reader.ReadByte();
 					}
 					else
 						throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification");
@@ -267,26 +267,26 @@ namespace scopely.msgpacksharp
 			}
 			else if (header == MsgPackConstants.Formats.UINT_16)
 			{
-				result = reader.ReadByte() + 
-					(reader.ReadByte() << 8);
+				result = (reader.ReadByte() << 8) + 
+					reader.ReadByte();
 			}
 			else if (header == MsgPackConstants.Formats.UINT_32)
 			{
-				result = reader.ReadByte() + 
-					(reader.ReadByte() << 8) + 
+				result = (reader.ReadByte() << 24) + 
 					(reader.ReadByte() << 16) + 
-					(reader.ReadByte() << 24);
+					(reader.ReadByte() << 8) + 
+					reader.ReadByte();
 			}
 			else if (header == MsgPackConstants.Formats.UINT_64)
 			{
-				result = reader.ReadByte() +
-					(reader.ReadByte() << 8) +
-					(reader.ReadByte() << 16) +
-					(reader.ReadByte() << 24) +
-					(reader.ReadByte() << 32) +
-					(reader.ReadByte() << 40) +
+				result = (reader.ReadByte() << 56) +
 					(reader.ReadByte() << 48) +
-					(reader.ReadByte() << 56);
+					(reader.ReadByte() << 40) +
+					(reader.ReadByte() << 32) +
+					(reader.ReadByte() << 24) +
+					(reader.ReadByte() << 16) +
+					(reader.ReadByte() << 8) +
+					reader.ReadByte();
 			}
 			else if (header == MsgPackConstants.Formats.INT_8)
 			{
@@ -335,15 +335,15 @@ namespace scopely.msgpacksharp
 				}
 				else if (header == MsgPackConstants.Formats.STR_16)
 				{
-					length = reader.ReadByte() + 
-						(reader.ReadByte() << 8);
+					length = (reader.ReadByte() << 8) + 
+						reader.ReadByte();
 				}
 				else if (header == MsgPackConstants.Formats.STR_32)
 				{
-					length = reader.ReadByte() + 
-						(reader.ReadByte() << 8) + 
+					length = (reader.ReadByte() << 24) + 
 						(reader.ReadByte() << 16) + 
-						(reader.ReadByte() << 24);
+						(reader.ReadByte() << 8) + 
+						reader.ReadByte();
 				}
 				byte[] stringBuffer = reader.ReadBytes(length);
 				result = UTF8Encoding.UTF8.GetString(stringBuffer);
