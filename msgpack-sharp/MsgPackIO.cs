@@ -3,12 +3,14 @@ using System.Reflection;
 using System.IO;
 using System.Text;
 using System.Collections;
+using MsgPack.Serialization;
 
 namespace scopely.msgpacksharp
 {
 	public static class MsgPackIO
 	{
 		private static readonly DateTime unixEpocUtc = new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc );
+		private const string nullProhibitedExceptionMessage = "Null value encountered but is prohibited";
 
 		internal static bool DeserializeCollection(IList collection, BinaryReader reader)
 		{
@@ -43,8 +45,8 @@ namespace scopely.msgpacksharp
 				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
-					object o = DeserializeValue(elementType, reader);
-					collection.Add(o);
+					object o = DeserializeValue(elementType, reader, NilImplication.MemberDefault);
+					collection.Add(Convert.ChangeType(o, elementType));
 				}
 			}
 			return isNull;
@@ -82,8 +84,8 @@ namespace scopely.msgpacksharp
 				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
-					object key = DeserializeValue(keyType, reader);
-					object val = DeserializeValue(valueType, reader);
+					object key = DeserializeValue(keyType, reader, NilImplication.MemberDefault);
+					object val = DeserializeValue(valueType, reader, NilImplication.MemberDefault);
 					collection.Add(key, val);
 				}
 			}
@@ -100,111 +102,46 @@ namespace scopely.msgpacksharp
 			return unixEpocUtc.AddMilliseconds(value).ToLocalTime();
 		}
 
-		internal static object DeserializeValue(Type type, BinaryReader reader)
+		internal static object DeserializeValue(Type type, BinaryReader reader, NilImplication nilImplication)
 		{
+			type = Nullable.GetUnderlyingType(type) ?? type;
 			object result = null;
 			if (type == typeof(string))
 			{
-				result = ReadMsgPackString(reader);
+				result = ReadMsgPackString(reader, nilImplication);
 			}
-			else if (type == typeof(int))
+			else if (type == typeof(int) || type == typeof(uint) ||
+					 type == typeof(byte) || type == typeof(sbyte) ||
+	    			 type == typeof(short) || type == typeof(ushort) ||
+					 type == typeof(long) || type == typeof(ulong))
 			{
-				result = (int)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(uint))
-			{
-				result = (uint)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(byte))
-			{
-				result = (byte)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(sbyte))
-			{
-				result = (sbyte)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(short))
-			{
-				result = (short)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(ushort))
-			{
-				result = (ushort)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(long))
-			{
-				result = (long)ReadMsgPackInt(reader);
-			}
-			else if (type == typeof(ulong))
-			{
-				result = (ulong)ReadMsgPackInt(reader);
+				result = ReadMsgPackInt(reader, nilImplication);
 			}
 			else if (type == typeof(float))
 			{
-				result = ReadMsgPackFloat(reader);
+				result = ReadMsgPackFloat(reader, nilImplication);
 			}
 			else if (type == typeof(double))
 			{
-				result = ReadMsgPackDouble(reader);
+				result = ReadMsgPackDouble(reader, nilImplication);
 			}
 			else if (type == typeof(Boolean) || type == typeof(bool))
 			{
-				result = ReadMsgPackBoolean(reader);
+				result = ReadMsgPackBoolean(reader, nilImplication);
 			}
 			else if (type == typeof(DateTime))
 			{
-				long unixEpochTicks = ReadMsgPackInt(reader);
+				long unixEpochTicks = (long)ReadMsgPackInt(reader, nilImplication);
 				result = ToDateTime(unixEpochTicks);
 			}
 			else if (type.IsEnum)
 			{
-				string enumVal = ReadMsgPackString(reader);
+				string enumVal = (string)ReadMsgPackString(reader, nilImplication);
 				result = Enum.Parse(type, enumVal);
 			}
 			else if (type.IsArray)
 			{
-				byte header = reader.ReadByte();
-				int length = 0;
-				if (header != MsgPackConstants.Formats.NIL)
-				{
-					if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
-					{
-						length = header - MsgPackConstants.FixedArray.MIN;
-					}
-					else if (header == MsgPackConstants.Formats.ARRAY_16)
-					{
-						length = (reader.ReadByte() << 8)+ 
-							reader.ReadByte();
-					}
-					else if (header == MsgPackConstants.Formats.ARRAY_32)
-					{
-						length = (reader.ReadByte() << 24) +
-							(reader.ReadByte() << 16) +
-							(reader.ReadByte() << 8) +
-							reader.ReadByte();
-					}
-					else
-						throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification");
-				}
-				if (type.GetElementType() == typeof(int))
-				{
-					int[] arr = new int[length];
-					for (int i = 0; i < length; i++)
-					{
-						arr[i] = (int)DeserializeValue(type.GetElementType(), reader);
-					}
-					result = arr;
-				}
-				else
-				{
-					Array array = Array.CreateInstance(type, length);
-					for (int i = 0; i < length; i++)
-					{
-						object thing = DeserializeValue(type.GetElementType(), reader);
-						array.SetValue(thing, i);
-					}
-					result = array;
-				}
+				throw new ApplicationException("Raw arrays are not supported by msgpack-sharp");
 			}
 			else
 			{
@@ -212,133 +149,177 @@ namespace scopely.msgpacksharp
 				if (constructorInfo == null)
 					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
 				result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
-				MsgPackSerializer.DeserializeObject(result, reader);
+				MsgPackSerializer.DeserializeObject(result, reader, nilImplication);
 			}
 			return result;
 		}
 
-		internal static bool ReadMsgPackBoolean(BinaryReader reader)
+		internal static byte ReadHeader(Type t, BinaryReader reader, NilImplication nilImplication, out object result)
 		{
-			return reader.ReadByte() == MsgPackConstants.Bool.TRUE ? true : false;
+			result = null;
+			byte v = reader.ReadByte();
+			if (v == MsgPackConstants.Formats.NIL)
+			{
+				if (nilImplication == NilImplication.MemberDefault)
+				{
+					if (t.IsValueType)
+						result = Activator.CreateInstance(t);
+				}
+				else if (nilImplication == NilImplication.Prohibit)
+					throw new ApplicationException(nullProhibitedExceptionMessage);
+			}
+			return v;
 		}
 
-		internal static float ReadMsgPackFloat(BinaryReader reader)
+		internal static object ReadMsgPackBoolean(BinaryReader reader, NilImplication nilImplication)
 		{
-			if (reader.ReadByte() != 0xca)
-				throw new ApplicationException("Serialized data doesn't match type being deserialized to");
-			byte[] data = reader.ReadBytes(4);
-			if (BitConverter.IsLittleEndian)
-				Array.Reverse(data);
-			return BitConverter.ToSingle(data, 0);
+			object result;
+			byte v = ReadHeader(typeof(bool), reader, nilImplication, out result);
+			if (v != MsgPackConstants.Formats.NIL)
+			{
+				result = v == MsgPackConstants.Bool.TRUE ? true : false;
+			}
+			return result;
 		}
 
-		internal static double ReadMsgPackDouble(BinaryReader reader)
+		internal static object ReadMsgPackFloat(BinaryReader reader, NilImplication nilImplication)
 		{
-			if (reader.ReadByte() != 0xcb)
-				throw new ApplicationException("Serialized data doesn't match type being deserialized to");
-			byte[] data = reader.ReadBytes(8);
-			if (BitConverter.IsLittleEndian)
-				Array.Reverse(data);
-			return BitConverter.ToDouble(data, 0);
-		}
-
-		internal static ulong ReadMsgPackULong(BinaryReader reader)
-		{
-			if (reader.ReadByte() != 0xcf)
-				throw new InvalidDataException("Serialized data doesn't match type being deserialized to");
-			return reader.ReadUInt64();
-		}
-
-		internal static long ReadMsgPackInt(BinaryReader reader)
-		{
-			byte header = reader.ReadByte();
-			long result = 0;
-			if (header < MsgPackConstants.FixedInteger.POSITIVE_MAX)
+			object result;
+			byte v = ReadHeader(typeof(float), reader, nilImplication, out result);
+			if (v != MsgPackConstants.Formats.NIL)
 			{
-				result = header;
-			}
-			else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN)
-			{
-				result = -(header - MsgPackConstants.FixedInteger.NEGATIVE_MIN);
-			}
-			else if (header == MsgPackConstants.Formats.UINT_8)
-			{
-				result = reader.ReadByte();
-			}
-			else if (header == MsgPackConstants.Formats.UINT_16)
-			{
-				result = (reader.ReadByte() << 8) + 
-					reader.ReadByte();
-			}
-			else if (header == MsgPackConstants.Formats.UINT_32)
-			{
-				result = (reader.ReadByte() << 24) + 
-					(reader.ReadByte() << 16) + 
-					(reader.ReadByte() << 8) + 
-					reader.ReadByte();
-			}
-			else if (header == MsgPackConstants.Formats.UINT_64)
-			{
-				result = (reader.ReadByte() << 56) +
-					(reader.ReadByte() << 48) +
-					(reader.ReadByte() << 40) +
-					(reader.ReadByte() << 32) +
-					(reader.ReadByte() << 24) +
-					(reader.ReadByte() << 16) +
-					(reader.ReadByte() << 8) +
-					reader.ReadByte();
-			}
-			else if (header == MsgPackConstants.Formats.INT_8)
-			{
-				result = reader.ReadSByte();
-			}
-			else if (header == MsgPackConstants.Formats.INT_16)
-			{
-				byte[] data = reader.ReadBytes(2);
-				if (BitConverter.IsLittleEndian)
-					Array.Reverse(data);
-				result = BitConverter.ToInt16(data, 0);
-			}
-			else if (header == MsgPackConstants.Formats.INT_32)
-			{
+				if (v != MsgPackConstants.Formats.FLOAT_32)
+					throw new ApplicationException("Serialized data doesn't match type being deserialized to");
 				byte[] data = reader.ReadBytes(4);
 				if (BitConverter.IsLittleEndian)
 					Array.Reverse(data);
-				result = BitConverter.ToInt32(data, 0);
+				result = BitConverter.ToSingle(data, 0);
 			}
-			else if (header == MsgPackConstants.Formats.INT_64)
-			{
-				byte[] data = reader.ReadBytes(8);
-				if (BitConverter.IsLittleEndian)
-					Array.Reverse(data);
-				result = BitConverter.ToInt64(data, 0);
-			}
-			else
-				throw new ApplicationException("Serialized data doesn't match type being deserialized to");
 			return result;
 		}
 
-		internal static string ReadMsgPackString(BinaryReader reader)
+		internal static object ReadMsgPackDouble(BinaryReader reader, NilImplication nilImplication)
 		{
-			string result = null;
-			int length = 0;
-			byte header = reader.ReadByte();
-			if (header != MsgPackConstants.Formats.NIL)
+			object result;
+			byte v = ReadHeader(typeof(double), reader, nilImplication, out result);
+			if (v != MsgPackConstants.Formats.NIL)
 			{
-				if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
+				if (v != MsgPackConstants.Formats.FLOAT_32)
+					throw new ApplicationException("Serialized data doesn't match type being deserialized to");
+				byte[] data = reader.ReadBytes(8);
+				if (BitConverter.IsLittleEndian)
+					Array.Reverse(data);
+				result = BitConverter.ToDouble(data, 0);
+			}
+			return result;
+		}
+
+		internal static object ReadMsgPackULong(BinaryReader reader, NilImplication nilImplication)
+		{
+			object result;
+			byte v = ReadHeader(typeof(ulong), reader, nilImplication, out result);
+			if (v != MsgPackConstants.Formats.NIL)
+			{
+				if (v != MsgPackConstants.Formats.UINT_64)
+					throw new ApplicationException("Serialized data doesn't match type being deserialized to");
+				result = reader.ReadUInt64();
+			}
+			return result;
+		}
+
+		internal static object ReadMsgPackInt(BinaryReader reader, NilImplication nilImplication)
+		{
+			object result;
+			byte v = ReadHeader(typeof(long), reader, nilImplication, out result);
+			if (v != MsgPackConstants.Formats.NIL)
+			{
+				if (v < MsgPackConstants.FixedInteger.POSITIVE_MAX)
 				{
-					length = header - MsgPackConstants.FixedString.MIN;
+					result = v;
 				}
-				else if (header == MsgPackConstants.Formats.STR_8)
+				else if (v >= MsgPackConstants.FixedInteger.NEGATIVE_MIN)
+				{
+					result = -(v - MsgPackConstants.FixedInteger.NEGATIVE_MIN);
+				}
+				else if (v == MsgPackConstants.Formats.UINT_8)
+				{
+					result = reader.ReadByte();
+				}
+				else if (v == MsgPackConstants.Formats.UINT_16)
+				{
+					result = (reader.ReadByte() << 8) + 
+						reader.ReadByte();
+				}
+				else if (v == MsgPackConstants.Formats.UINT_32)
+				{
+					result = (reader.ReadByte() << 24) + 
+						(reader.ReadByte() << 16) + 
+						(reader.ReadByte() << 8) + 
+						reader.ReadByte();
+				}
+				else if (v == MsgPackConstants.Formats.UINT_64)
+				{
+					result = (reader.ReadByte() << 56) +
+						(reader.ReadByte() << 48) +
+						(reader.ReadByte() << 40) +
+						(reader.ReadByte() << 32) +
+						(reader.ReadByte() << 24) +
+						(reader.ReadByte() << 16) +
+						(reader.ReadByte() << 8) +
+						reader.ReadByte();
+				}
+				else if (v == MsgPackConstants.Formats.INT_8)
+				{
+					result = reader.ReadSByte();
+				}
+				else if (v == MsgPackConstants.Formats.INT_16)
+				{
+					byte[] data = reader.ReadBytes(2);
+					if (BitConverter.IsLittleEndian)
+						Array.Reverse(data);
+					result = BitConverter.ToInt16(data, 0);
+				}
+				else if (v == MsgPackConstants.Formats.INT_32)
+				{
+					byte[] data = reader.ReadBytes(4);
+					if (BitConverter.IsLittleEndian)
+						Array.Reverse(data);
+					result = BitConverter.ToInt32(data, 0);
+				}
+				else if (v == MsgPackConstants.Formats.INT_64)
+				{
+					byte[] data = reader.ReadBytes(8);
+					if (BitConverter.IsLittleEndian)
+						Array.Reverse(data);
+					result = BitConverter.ToInt64(data, 0);
+				}
+				else
+					throw new ApplicationException("Serialized data doesn't match type being deserialized to");
+			}
+			return result;
+		}
+
+		internal static object ReadMsgPackString(BinaryReader reader, NilImplication nilImplication)
+		{
+			object result;
+			byte v = ReadHeader(typeof(string), reader, nilImplication, out result);
+			if (v != MsgPackConstants.Formats.NIL)
+			{
+				int length = 0;
+				if (v >= MsgPackConstants.FixedString.MIN && v <= MsgPackConstants.FixedString.MAX)
+				{
+					length = v - MsgPackConstants.FixedString.MIN;
+				}
+				else if (v == MsgPackConstants.Formats.STR_8)
 				{
 					length = reader.ReadByte();
 				}
-				else if (header == MsgPackConstants.Formats.STR_16)
+				else if (v == MsgPackConstants.Formats.STR_16)
 				{
 					length = (reader.ReadByte() << 8) + 
 						reader.ReadByte();
 				}
-				else if (header == MsgPackConstants.Formats.STR_32)
+				else if (v == MsgPackConstants.Formats.STR_32)
 				{
 					length = (reader.ReadByte() << 24) + 
 						(reader.ReadByte() << 16) + 
@@ -675,6 +656,7 @@ namespace scopely.msgpacksharp
 			else
 			{
 				Type t = val.GetType();
+				t = Nullable.GetUnderlyingType(t) ?? t;
 				if (t == typeof(string))
 				{
 					WriteMsgPack(writer, (string)val);
@@ -760,7 +742,7 @@ namespace scopely.msgpacksharp
 						SerializeEnumerable(array.GetEnumerator(), writer);
 					}
 				}
-				else if (t.GetInterface("System.Collections.Generic.IList`1") != null)
+				else if (MsgPackSerializer.IsGenericList(t))
 				{
 					if (val == null)
 					{
@@ -793,7 +775,7 @@ namespace scopely.msgpacksharp
 						SerializeEnumerable(list.GetEnumerator(), writer);
 					}
 				}
-				else if (t.GetInterface("System.Collections.Generic.IDictionary`2") != null)
+				else if (MsgPackSerializer.IsGenericDictionary(t))
 				{
 					if (val == null)
 					{

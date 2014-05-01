@@ -29,25 +29,33 @@ namespace scopely.msgpacksharp.tests
 		public DateTime BirthDay { get; set; }
 
 		[MessagePackMember( 6 )]
-		public int[] SomeNumbers { get; set; }
-
-		[MessagePackMember( 7 )]
 		public List<AnimalColor> SpotColors { get; set; }
 
-		[MessagePackMember( 8 )]
+		[MessagePackMember( 7 )]
 		public List<AnimalColor> MoreColors { get; set; }
 
-		[MessagePackMember( 9 )]
+		[MessagePackMember( 8 )]
 		public Dictionary<string,string> Metadata { get; set; }
 
-		[MessagePackMember( 10 )]
+		[MessagePackMember( 9 )]
 		public List<int> ListOfInts { get; set; }
 
-		[MessagePackMember( 11 )]
+		[MessagePackMember( 10 )]
 		public Habitat CurrentHabitat { get; set; }
 
-		[MessagePackMember( 12 )]
+		[MessagePackMember( 11 )]
 		public string TheLongString { get; set; }
+
+#if !COEXIST_CLI
+		[MessagePackMember( 12, NilImplication = NilImplication.Null )]
+		public int? NullableIntOne { get; set; }
+
+		[MessagePackMember( 13, NilImplication = NilImplication.MemberDefault )]
+		public int? NullableIntTwo { get; set; }
+
+		[MessagePackMember( 14, NilImplication = NilImplication.MemberDefault )]
+		public int? NullableIntThree { get; set; }
+#endif
 
 		public static AnimalMessage CreateTestMessage()
 		{
@@ -58,9 +66,6 @@ namespace scopely.msgpacksharp.tests
 			msg.AnimalName = "Lunchbox";
 			msg.AnimalColor = new AnimalColor() { Red = 1.0f, Green = 0.1f, Blue = 0.1f };
 			msg.BirthDay = new DateTime(1974, 1, 4);
-			msg.SomeNumbers = new int[5];
-			for (int i = 0; i < msg.SomeNumbers.Length; i++)
-				msg.SomeNumbers[i] = i * 2;
 			msg.SpotColors = new List<AnimalColor>();
 			for (int i = 0; i < 3; i++)
 			{
@@ -81,6 +86,12 @@ namespace scopely.msgpacksharp.tests
 			{
 				msg.TheLongString += "+";
 			}
+
+#if !COEXIST_CLI
+			msg.NullableIntOne = null;
+			msg.NullableIntTwo = null;
+			msg.NullableIntThree = 1;
+#endif
 
 			return msg;
 		}

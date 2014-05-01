@@ -5,34 +5,28 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.0</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}</ProjectGuid>
+    <ProjectGuid>{F9E4A0A8-0657-461D-AAD7-E78B97EBE22E}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>msgpacksharpverifier</RootNamespace>
-    <AssemblyName>msgpack-sharp-verifier</AssemblyName>
+    <RootNamespace>PerfTest</RootNamespace>
+    <AssemblyName>PerfTest</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug</OutputPath>
-    <DefineConstants>DEBUG;VERIFIER</DefineConstants>
+    <DefineConstants>DEBUG;COEXIST_CLI</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Externalconsole>true</Externalconsole>
-    <CustomCommands>
-      <CustomCommands>
-        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/msgpack-sharp-tests/bin/Debug/" />
-        <Command type="AfterBuild" command="cp ${ProjectDir}/../lib/MsgPack.dll ${SolutionDir}/msgpack-sharp-tests/bin/Debug/" />
-      </CustomCommands>
-    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Externalconsole>true</Externalconsole>
+    <DefineConstants>COEXIST_CLI</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -54,4 +48,10 @@
     </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\msgpack-sharp\msgpack-sharp.csproj">
+      <Project>{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}</Project>
+      <Name>msgpack-sharp</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

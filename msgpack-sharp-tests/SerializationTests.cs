@@ -99,11 +99,6 @@ namespace scopely.msgpacksharp.tests
 			Assert.AreEqual(msg.AnimalColor.Green, restored.AnimalColor.Green);
 			Assert.AreEqual(msg.AnimalColor.Blue, restored.AnimalColor.Blue);
 			Assert.AreEqual(msg.BirthDay, restored.BirthDay);
-			Assert.AreEqual(msg.SomeNumbers.Length, restored.SomeNumbers.Length);
-			for (int i = 0; i < msg.SomeNumbers.Length; i++)
-			{
-				Assert.AreEqual(msg.SomeNumbers[i], restored.SomeNumbers[i]);
-			}
 			Assert.AreEqual(msg.SpotColors.Count, restored.SpotColors.Count);
 			for (int i = 0; i < msg.SpotColors.Count; i++)
 			{
@@ -124,6 +119,10 @@ namespace scopely.msgpacksharp.tests
 
 			Assert.AreEqual(msg.CurrentHabitat, restored.CurrentHabitat);
 			Assert.AreEqual(msg.TheLongString, restored.TheLongString);
+
+			Assert.IsFalse(restored.NullableIntOne.HasValue);
+			Assert.IsTrue(restored.NullableIntTwo.HasValue);
+			Assert.IsTrue(restored.NullableIntThree.HasValue && msg.NullableIntThree.Value == 1);
 		}
 	}
 }

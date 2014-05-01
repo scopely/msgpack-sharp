@@ -9,11 +9,13 @@ namespace scopely.msgpacksharp.tests
 		{
 		}
 
-		[MessagePackMember(10)]
+		[MessagePackMember(0)]
 		public float Red { get; set; }
-		[MessagePackMember(20)]
+
+		[MessagePackMember(1)]
 		public float Green { get; set; }
-		[MessagePackMember(30)]
+
+		[MessagePackMember(2)]
 		public float Blue { get; set; }
 
 		public override bool Equals(object obj)

@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using System.Collections;
+using MsgPack.Serialization;
 
 namespace scopely.msgpacksharp
 {
@@ -13,12 +14,15 @@ namespace scopely.msgpacksharp
 		private PropertyInfo propInfo;
 		private string name;
 		private Type valueType;
+		private NilImplication nilImplication = NilImplication.MemberDefault; 
 
-		internal SerializableProperty(PropertyInfo propInfo, int sequence)
+		internal SerializableProperty(PropertyInfo propInfo, int sequence, NilImplication nilImplication)
 		{
 			this.propInfo = propInfo;
 			this.name = propInfo.Name;
-			this.valueType = propInfo.PropertyType;
+			//this.valueType = propInfo.PropertyType;
+			this.valueType = Nullable.GetUnderlyingType(propInfo.PropertyType) ?? propInfo.PropertyType;
+			this.nilImplication = nilImplication;
 			Sequence = sequence;
 		}
 
@@ -46,10 +50,10 @@ namespace scopely.msgpacksharp
 			
 		internal void Deserialize(object o, BinaryReader reader)
 		{
-			object val = MsgPackIO.DeserializeValue(ValueType, reader);
-			propInfo.SetValue(o, val, emptyObjArgs);
+			object val = MsgPackIO.DeserializeValue(valueType, reader, nilImplication);
+			object safeValue = (val == null) ? null : Convert.ChangeType(val, valueType);
+			propInfo.SetValue(o, safeValue, emptyObjArgs);
 		}
-
 	}
 }
 

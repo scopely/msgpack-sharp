@@ -15,6 +15,7 @@ namespace MsgPack.Serialization
 		public MessagePackMemberAttribute(int id)
 		{
 			this.id = id;
+			NilImplication = NilImplication.MemberDefault;
 		}
 
 		public int Id

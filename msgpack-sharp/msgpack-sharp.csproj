@@ -45,6 +45,7 @@
     <Compile Include="MsgPackIO.cs" />
     <Compile Include="NilImplication.cs" />
     <Compile Include="MessagePackMemberAttribute.cs" />
+    <Compile Include="TypeInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

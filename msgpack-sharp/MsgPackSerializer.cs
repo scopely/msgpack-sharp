@@ -3,6 +3,7 @@ using System.Reflection;
 using System.IO;
 using System.Collections.Generic;
 using System.Collections;
+using MsgPack.Serialization;
 
 namespace scopely.msgpacksharp
 {
@@ -11,11 +12,46 @@ namespace scopely.msgpacksharp
 		private static Dictionary<Type,MsgPackSerializer> serializers = new Dictionary<Type,MsgPackSerializer>();
 		private List<SerializableProperty> props;
 		private Type serializedType;
+		private byte[] serializationBuffer = new byte[UInt16.MaxValue - 1];
+		private static Dictionary<Type,TypeInfo> typeInfos = new Dictionary<Type, TypeInfo>();
 
 		public MsgPackSerializer(Type type)
 		{
 			serializedType = type;
 			BuildMap();
+		}
+
+		internal static bool IsGenericList(Type type)
+		{
+			TypeInfo info = null;
+			if (!typeInfos.TryGetValue(type, out info))
+			{
+				info = new TypeInfo(type);
+				typeInfos[type] = info;
+			}
+			return info.IsGenericList;
+		}
+
+		internal static bool IsGenericDictionary(Type type)
+		{
+			TypeInfo info = null;
+			if (!typeInfos.TryGetValue(type, out info))
+			{
+				info = new TypeInfo(type);
+				typeInfos[type] = info;
+			}
+			return info.IsGenericDictionary;
+		}
+
+		internal static bool IsSerializableGenericCollection(Type type)
+		{
+			TypeInfo info = null;
+			if (!typeInfos.TryGetValue(type, out info))
+			{
+				info = new TypeInfo(type);
+				typeInfos[type] = info;
+			}
+			return info.IsSerializableGenericCollection;
 		}
 
 		private static MsgPackSerializer GetSerializer(Type t)
@@ -36,13 +72,15 @@ namespace scopely.msgpacksharp
 		public byte[] Serialize(object o)
 		{
 			byte[] result = null;
-			using (MemoryStream stream = new MemoryStream())
+			using (MemoryStream stream = new MemoryStream(serializationBuffer))
 			{
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
 					Serialize(o, writer);
-					result = stream.ToArray();
+					//result = stream.ToArray();
+					result = new byte[stream.Position];
 				}
+				Array.Copy(serializationBuffer, result, result.Length);
 			}
 			return result;
 		}
@@ -53,12 +91,13 @@ namespace scopely.msgpacksharp
 			{
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
-					return (T)DeserializeObject(typeof(T), reader);
+					object o = DeserializeObject(typeof(T), reader);
+					return (T)Convert.ChangeType(o, typeof(T));
 				}
 			}
 		}
 
-		internal static object DeserializeObject(object o, BinaryReader reader)
+		internal static object DeserializeObject(object o, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
 		{
 			if (o is IList)
 			{
@@ -78,14 +117,13 @@ namespace scopely.msgpacksharp
 				return GetSerializer(o.GetType()).Deserialize(o, reader);
 		}
 
-		internal static object DeserializeObject(Type type, BinaryReader reader)
+		internal static object DeserializeObject(Type type, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
 		{
 			if (type.IsPrimitive || 
 				type == typeof(string) || 
-				type.GetInterface("System.Collections.Generic.IList`1") != null ||
-				type.GetInterface("System.Collections.Generic.IDictionary`2") != null)
+				IsSerializableGenericCollection(type))
 			{
-				return MsgPackIO.DeserializeValue(type, reader);
+				return MsgPackIO.DeserializeValue(type, reader, nilImplication);
 			}
 			else
 			{
@@ -144,8 +182,7 @@ namespace scopely.msgpacksharp
 			{
 				if (serializedType.IsPrimitive || 
 					serializedType == typeof(string) ||
-					serializedType.GetInterface("System.Collections.Generic.IDictionary`2") != null ||
-					serializedType.GetInterface("System.Collections.Generic.IList`1") != null)
+					IsSerializableGenericCollection(serializedType))
 				{
 					MsgPackIO.SerializeValue(o, writer);
 				}
@@ -184,8 +221,7 @@ namespace scopely.msgpacksharp
         {
 			if (!serializedType.IsPrimitive && 
 				serializedType != typeof(string) &&
-				serializedType.GetInterface("System.Collections.Generic.IList`1") == null &&
-				serializedType.GetInterface("System.Collections.Generic.IDictionary`2") == null)
+				!IsSerializableGenericCollection(serializedType))
 			{
 				props = new List<SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -193,7 +229,8 @@ namespace scopely.msgpacksharp
 					object[] customAttributes = prop.GetCustomAttributes(typeof(MsgPack.Serialization.MessagePackMemberAttribute), true);
 					if (customAttributes != null && customAttributes.Length == 1)
 					{
-						props.Add(new SerializableProperty(prop, ((MsgPack.Serialization.MessagePackMemberAttribute)customAttributes[0]).Id));
+						MessagePackMemberAttribute att = (MsgPack.Serialization.MessagePackMemberAttribute)customAttributes[0];
+						props.Add(new SerializableProperty(prop, att.Id, att.NilImplication));
 					}
 				}
 				props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));
