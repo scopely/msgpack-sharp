@@ -10,15 +10,15 @@ This framework is purpose-built for moving DTO's around in a compact and fast wa
 // Declare your DTO/message class
 public class MyMessage
 {
-    // Use the [MsgPack] annotation to specify the sequence order of (de)serialized properties
-    [MsgPack(Sequence = 10)]
+    // Use the [MessagePackMember] attribute to specify the sequence order of (de)serialized properties
+    [MessagePackMember(10)]
     public string MyString { get; set; }
     // Sequence values specify an order, but they need not be consecutive (here we count by 10 to make it easier to add new props later without changing the others)
-    [MsgPack(Sequence = 20)]
+    [MessagePackMember(20)]
     public int MyNumber { get; set; }
-    [MsgPack(Sequence = 30)]
+    [MessagePackMember(30)]
     public List<MyMessage> MyChildren { get; set; }
-    [MsgPack(Sequence = 40)]
+    [MessagePackMember(40)]
     public Dictionary<string,string> MyMetadata { get; set; }
 }
 

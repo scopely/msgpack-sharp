@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-#if VERIFIER
 using MsgPack.Serialization;
-#endif
 
 namespace scopely.msgpacksharp.tests
 {
@@ -12,72 +10,43 @@ namespace scopely.msgpacksharp.tests
 		{
 		}
 
-#if VERIFIER
 		[MessagePackMember( 0 )]
-#endif
-		[MsgPack(Sequence = 1)]
 		public bool IsAlive { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 1 )]
-#endif
-		[MsgPack(Sequence = 5)]
 		public int HeightInches { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 2 )]
-#endif
-		[MsgPack(Sequence = 10)]
 		public string AnimalName { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 3 )]
-#endif
-		[MsgPack(Sequence = 20)]
 		public string AnimalKind { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 4 )]
-#endif
-		[MsgPack(Sequence = 30)]
 		public AnimalColor AnimalColor { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 5 )]
-#endif
-		[MsgPack(Sequence = 40)]
 		public DateTime BirthDay { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 6 )]
-#endif
-		[MsgPack(Sequence = 50)]
 		public int[] SomeNumbers { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 7 )]
-#endif
-		[MsgPack(Sequence = 60)]
 		public List<AnimalColor> SpotColors { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 8 )]
-#endif
-		[MsgPack(Sequence = 70)]
 		public List<AnimalColor> MoreColors { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 9 )]
-#endif
-		[MsgPack(Sequence = 80)]
 		public Dictionary<string,string> Metadata { get; set; }
-#if VERIFIER
+
 		[MessagePackMember( 10 )]
-#endif
-		[MsgPack(Sequence = 90)]
 		public List<int> ListOfInts { get; set; }
 
-#if VERIFIER
 		[MessagePackMember( 11 )]
-#endif
-		[MsgPack(Sequence = 100)]
 		public Habitat CurrentHabitat { get; set; }
 
-#if VERIFIER
 		[MessagePackMember( 12 )]
-#endif
-		[MsgPack(Sequence = 110)]
 		public string TheLongString { get; set; }
 
 		public static AnimalMessage CreateTestMessage()

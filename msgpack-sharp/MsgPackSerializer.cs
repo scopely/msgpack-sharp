@@ -190,13 +190,10 @@ namespace scopely.msgpacksharp
 				props = new List<SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
-					foreach (object att in prop.GetCustomAttributes(true))
+					object[] customAttributes = prop.GetCustomAttributes(typeof(MsgPack.Serialization.MessagePackMemberAttribute), true);
+					if (customAttributes != null && customAttributes.Length == 1)
 					{
-						MsgPackAttribute msgPackAttribute = att as MsgPackAttribute;
-						if (msgPackAttribute != null)
-						{
-							props.Add(new SerializableProperty(prop, msgPackAttribute.Sequence));
-						}
+						props.Add(new SerializableProperty(prop, ((MsgPack.Serialization.MessagePackMemberAttribute)customAttributes[0]).Id));
 					}
 				}
 				props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));

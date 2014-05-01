@@ -41,9 +41,10 @@
     <Compile Include="Extensions\ObjectExtensions.cs" />
     <Compile Include="MsgPackSerializer.cs" />
     <Compile Include="SerializableProperty.cs" />
-    <Compile Include="MsgPackAttribute.cs" />
     <Compile Include="MsgPackConstants.cs" />
     <Compile Include="MsgPackIO.cs" />
+    <Compile Include="NilImplication.cs" />
+    <Compile Include="MessagePackMemberAttribute.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
