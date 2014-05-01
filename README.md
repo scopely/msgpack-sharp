@@ -18,7 +18,7 @@ public class MyMessage
     public int MyNumber { get; set; }
     [MessagePackMember(30)]
     public List<MyMessage> MyChildren { get; set; }
-    [MessagePackMember(30)]
+    [MessagePackMember(40)]
     public Dictionary<string,string> MyMetadata { get; set; }
 }
 
