@@ -1,4 +1,5 @@
 ﻿using System;
+using MsgPack.Serialization;
 
 namespace scopely.msgpacksharp.tests
 {
@@ -8,11 +9,11 @@ namespace scopely.msgpacksharp.tests
 		{
 		}
 
-		[MsgPack(Sequence = 10)]
+		[MessagePackMember(10)]
 		public float Red { get; set; }
-		[MsgPack(Sequence = 20)]
+		[MessagePackMember(20)]
 		public float Green { get; set; }
-		[MsgPack(Sequence = 30)]
+		[MessagePackMember(30)]
 		public float Blue { get; set; }
 
 		public override bool Equals(object obj)
