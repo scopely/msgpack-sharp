@@ -7,7 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msgpack-sharp-tests", "msgp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msgpack-sharp-verifier", "msgpack-sharp-verifier\msgpack-sharp-verifier.csproj", "{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfTest", "PerfTest\PerfTest.csproj", "{F9E4A0A8-0657-461D-AAD7-E78B97EBE22E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfTestMsgPackSharp", "PerfTestMsgPackSharp\PerfTestMsgPackSharp.csproj", "{74668096-A9DA-48EC-8B29-30EB8B486079}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfTestCLI", "PerfTestCLI\PerfTestCLI.csproj", "{BF86E1B3-BD5F-4ED0-8D97-27CF6FFDF9C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,16 +25,20 @@ Global
 		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A7A433B-0B08-4F87-A526-CE1B71EE4CD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74668096-A9DA-48EC-8B29-30EB8B486079}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74668096-A9DA-48EC-8B29-30EB8B486079}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74668096-A9DA-48EC-8B29-30EB8B486079}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74668096-A9DA-48EC-8B29-30EB8B486079}.Release|Any CPU.Build.0 = Release|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F9E4A0A8-0657-461D-AAD7-E78B97EBE22E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F9E4A0A8-0657-461D-AAD7-E78B97EBE22E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F9E4A0A8-0657-461D-AAD7-E78B97EBE22E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F9E4A0A8-0657-461D-AAD7-E78B97EBE22E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF86E1B3-BD5F-4ED0-8D97-27CF6FFDF9C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF86E1B3-BD5F-4ED0-8D97-27CF6FFDF9C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF86E1B3-BD5F-4ED0-8D97-27CF6FFDF9C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF86E1B3-BD5F-4ED0-8D97-27CF6FFDF9C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = PerfTest\PerfTest.csproj
+		StartupItem = msgpack-sharp\msgpack-sharp.csproj
 	EndGlobalSection
 EndGlobal

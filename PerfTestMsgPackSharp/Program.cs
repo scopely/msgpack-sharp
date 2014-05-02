@@ -7,7 +7,7 @@ namespace PerfTest
 {
 	class MainClass
 	{
-		private const int numMessagesToTest = 1;
+		private const int numMessagesToTest = 10000;
 		private static AnimalMessage testMsg;
 
 		public static void Main(string[] args)
@@ -19,7 +19,6 @@ namespace PerfTest
 			//TestMsgPackSharp();
 
 			// Actual tests...
-			TimeTest(TestCli, "Serialize and Deserialize with Official CLI");
 			TimeTest(TestMsgPackSharp, "Serialize and Deserialize with MsgPack-Sharp");
 		}
 
@@ -41,28 +40,6 @@ namespace PerfTest
 #pragma warning disable 0219
 				var deserialized = MsgPackSerializer.Deserialize<AnimalMessage>(buffer);
 #pragma warning restore 0219
-				Console.Out.WriteLine("Des = " + deserialized);
-			}
-		}
-
-		private static void TestCli()
-		{
-			var serializer = MsgPack.Serialization.MessagePackSerializer.Create<AnimalMessage>();
-			for (int i = 0; i < numMessagesToTest; i++)
-			{
-				byte[] buffer = null;
-				using (MemoryStream outStream = new MemoryStream())
-				{	
-					serializer.Pack(outStream, testMsg);
-					buffer = outStream.ToArray();
-				}
-				using (MemoryStream stream = new MemoryStream(buffer))
-				{
-#pragma warning disable 0219
-					var deserialized = serializer.Unpack(stream);
-#pragma warning restore 0219
-					Console.Out.WriteLine("Des = " + deserialized);
-				}
 			}
 		}
 	}

@@ -5,11 +5,10 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.0</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>scopely.msgpacksharp</RootNamespace>
-    <AssemblyName>msgpack-sharp</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <ProjectGuid>{BF86E1B3-BD5F-4ED0-8D97-27CF6FFDF9C7}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PerfTestCLI</RootNamespace>
+    <AssemblyName>PerfTestCLI</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -19,31 +18,34 @@
     <DefineConstants>DEBUG;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <ConsolePause>false</ConsolePause>
+    <Externalconsole>true</Externalconsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <ConsolePause>false</ConsolePause>
+    <Externalconsole>true</Externalconsole>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="MsgPack">
+      <HintPath>..\lib\MsgPack.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Extensions\ObjectExtensions.cs" />
-    <Compile Include="MsgPackSerializer.cs" />
-    <Compile Include="SerializableProperty.cs" />
-    <Compile Include="MsgPackConstants.cs" />
-    <Compile Include="MsgPackIO.cs" />
-    <Compile Include="NilImplication.cs" />
-    <Compile Include="MessagePackMemberAttribute.cs" />
-    <Compile Include="TypeInfo.cs" />
+    <Compile Include="..\msgpack-sharp-tests\AnimalColor.cs">
+      <Link>AnimalColor.cs</Link>
+    </Compile>
+    <Compile Include="..\msgpack-sharp-tests\AnimalMessage.cs">
+      <Link>AnimalMessage.cs</Link>
+    </Compile>
+    <Compile Include="..\msgpack-sharp-tests\Habitat.cs">
+      <Link>Habitat.cs</Link>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <ItemGroup>
-    <Folder Include="Extensions\" />
-  </ItemGroup>
 </Project>

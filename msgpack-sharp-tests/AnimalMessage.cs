@@ -46,7 +46,6 @@ namespace scopely.msgpacksharp.tests
 		[MessagePackMember( 11 )]
 		public string TheLongString { get; set; }
 
-#if !COEXIST_CLI
 		[MessagePackMember( 12, NilImplication = NilImplication.Null )]
 		public int? NullableIntOne { get; set; }
 
@@ -55,7 +54,6 @@ namespace scopely.msgpacksharp.tests
 
 		[MessagePackMember( 14, NilImplication = NilImplication.MemberDefault )]
 		public int? NullableIntThree { get; set; }
-#endif
 
 		public static AnimalMessage CreateTestMessage()
 		{
@@ -87,13 +85,16 @@ namespace scopely.msgpacksharp.tests
 				msg.TheLongString += "+";
 			}
 
-#if !COEXIST_CLI
 			msg.NullableIntOne = null;
 			msg.NullableIntTwo = null;
 			msg.NullableIntThree = 1;
-#endif
 
 			return msg;
+		}
+
+		public override string ToString()
+		{
+			return string.Format("[AnimalMessage: IsAlive={0}, HeightInches={1}, AnimalName={2}, AnimalKind={3}, AnimalColor={4}, BirthDay={5}, SpotColors={6}, MoreColors={7}, Metadata={8}, ListOfInts={9}, CurrentHabitat={10}, TheLongString={11}]", IsAlive, HeightInches, AnimalName, AnimalKind, AnimalColor, BirthDay, SpotColors, MoreColors, Metadata, ListOfInts, CurrentHabitat, TheLongString);
 		}
 	}
 }
