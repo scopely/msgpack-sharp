@@ -49,6 +49,18 @@ namespace scopely.msgpacksharp.tests
 				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
 			}
 		}
+		
+		[Test]
+		public void TestNulls()
+		{
+			var msg = AnimalMessage.CreateTestMessage();
+			msg.AnimalColor = null;
+			byte[] payload = msg.ToMsgPack();
+			Assert.IsNotNull(payload);
+			Assert.AreNotEqual(0, payload.Length);
+			var restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
+			Assert.IsNull(restored.AnimalColor);
+		}
 
 		[Test]
 		public void TestRoundTripPrimitives()
@@ -104,7 +116,7 @@ namespace scopely.msgpacksharp.tests
 			{
 				Assert.AreEqual(msg.SpotColors[i], restored.SpotColors[i]);
 			}
-			Assert.IsEmpty(restored.MoreColors);
+			Assert.IsNull(restored.MoreColors);
 			Assert.IsNotNull(restored.Metadata);
 			foreach (KeyValuePair<string,string> pair in msg.Metadata)
 			{

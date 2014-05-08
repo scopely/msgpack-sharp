@@ -149,7 +149,7 @@ namespace scopely.msgpacksharp
 				if (constructorInfo == null)
 					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
 				result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
-				MsgPackSerializer.DeserializeObject(result, reader, nilImplication);
+				result = MsgPackSerializer.DeserializeObject(result, reader, nilImplication);
 			}
 			return result;
 		}
