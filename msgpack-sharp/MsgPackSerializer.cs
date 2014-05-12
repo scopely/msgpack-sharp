@@ -12,7 +12,6 @@ namespace scopely.msgpacksharp
 		private static Dictionary<Type,MsgPackSerializer> serializers = new Dictionary<Type,MsgPackSerializer>();
 		private List<SerializableProperty> props;
 		private Type serializedType;
-		private byte[] serializationBuffer = new byte[UInt16.MaxValue - 1];
 		private static Dictionary<Type,TypeInfo> typeInfos = new Dictionary<Type, TypeInfo>();
 
 		public MsgPackSerializer(Type type)
@@ -69,20 +68,39 @@ namespace scopely.msgpacksharp
 			return GetSerializer(o.GetType()).Serialize(o);
 		}
 
+		public static int SerializeObject(object o, byte[] buffer, int offset)
+		{
+			return GetSerializer(o.GetType()).Serialize(o, buffer, offset);
+		}
+
 		public byte[] Serialize(object o)
 		{
 			byte[] result = null;
-			using (MemoryStream stream = new MemoryStream(serializationBuffer))
+			using (MemoryStream stream = new MemoryStream())
 			{
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
 					Serialize(o, writer);
-					//result = stream.ToArray();
 					result = new byte[stream.Position];
 				}
-				Array.Copy(serializationBuffer, result, result.Length);
+				result = stream.ToArray();
 			}
 			return result;
+		}
+
+		public int Serialize(object o, byte[] buffer, int offset)
+		{
+			int endPos = 0;
+			using (MemoryStream stream = new MemoryStream(buffer))
+			{
+				using (BinaryWriter writer = new BinaryWriter(stream))
+				{
+					stream.Seek(offset, SeekOrigin.Begin);
+					Serialize(o, writer);
+					endPos = (int)stream.Position;
+				}
+			}
+			return endPos;
 		}
 
 		public static T Deserialize<T>(byte[] buffer) where T : new()
@@ -93,6 +111,36 @@ namespace scopely.msgpacksharp
 				{
 					object o = DeserializeObject(typeof(T), reader);
 					return (T)Convert.ChangeType(o, typeof(T));
+				}
+			}
+		}
+
+		public static object Deserialize(Type t, byte[] buffer)
+		{
+			return Deserialize(t, buffer, 0);
+		}
+
+		public static object Deserialize(Type t, byte[] buffer, int offset)
+		{
+			using (MemoryStream stream = new MemoryStream(buffer))
+			{
+				stream.Seek(offset, SeekOrigin.Begin);
+				using (BinaryReader reader = new BinaryReader(stream))
+				{
+					object o = DeserializeObject(t, reader);
+					return Convert.ChangeType(o, t);
+				}
+			}
+		}
+
+		public static void DeserializeObject(object o, byte[] buffer, int offset)
+		{
+			using (MemoryStream stream = new MemoryStream(buffer))
+			{
+				stream.Seek(offset, SeekOrigin.Begin);
+				using (BinaryReader reader = new BinaryReader(stream))
+				{
+					GetSerializer(o.GetType()).Deserialize(o, reader);
 				}
 			}
 		}
