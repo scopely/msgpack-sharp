@@ -12,7 +12,6 @@ namespace scopely.msgpacksharp
 		private static Dictionary<Type,MsgPackSerializer> serializers = new Dictionary<Type,MsgPackSerializer>();
 		private List<SerializableProperty> props;
 		private Type serializedType;
-		private byte[] serializationBuffer = new byte[UInt16.MaxValue - 1];
 		private static Dictionary<Type,TypeInfo> typeInfos = new Dictionary<Type, TypeInfo>();
 
 		public MsgPackSerializer(Type type)
@@ -77,14 +76,14 @@ namespace scopely.msgpacksharp
 		public byte[] Serialize(object o)
 		{
 			byte[] result = null;
-			using (MemoryStream stream = new MemoryStream(serializationBuffer))
+			using (MemoryStream stream = new MemoryStream())
 			{
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
 					Serialize(o, writer);
 					result = new byte[stream.Position];
 				}
-				Array.Copy(serializationBuffer, result, result.Length);
+				result = stream.ToArray();
 			}
 			return result;
 		}
