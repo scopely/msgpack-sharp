@@ -65,23 +65,27 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestRoundTripPrimitives()
 		{
-			int intVal = 0;
-			byte[] payload = intVal.ToMsgPack();
-			Assert.IsNotNull(payload);
-			Assert.AreNotEqual(0, payload.Length);
-
-			int restoredInt = MsgPackSerializer.Deserialize<int>(payload);
-			Assert.AreEqual(intVal, restoredInt);
+			TestRoundTrip(0);
+			TestRoundTrip(127);
 
 			var stuff = new Dictionary<string, string>();
 			stuff["Foo"] = "Value1";
 			stuff["Bar"] = "Value2";
-			payload = stuff.ToMsgPack();
+			byte[] payload = stuff.ToMsgPack();
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
 
 			var restoredStuff = MsgPackSerializer.Deserialize<Dictionary<string,string>>(payload);
 			Assert.AreEqual(stuff.Count, restoredStuff.Count);
+		}
+
+		private void TestRoundTrip(int intVal)
+		{
+			byte[] payload = intVal.ToMsgPack();
+			Assert.IsNotNull(payload);
+			Assert.AreNotEqual(0, payload.Length);
+			int restoredInt = MsgPackSerializer.Deserialize<int>(payload);
+			Assert.AreEqual(intVal, restoredInt);
 		}
 
 		[Test]

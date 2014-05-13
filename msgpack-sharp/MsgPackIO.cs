@@ -233,7 +233,7 @@ namespace scopely.msgpacksharp
 			byte v = ReadHeader(typeof(long), reader, nilImplication, out result);
 			if (v != MsgPackConstants.Formats.NIL)
 			{
-				if (v < MsgPackConstants.FixedInteger.POSITIVE_MAX)
+				if (v <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
 				{
 					result = v;
 				}
