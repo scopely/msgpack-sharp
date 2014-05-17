@@ -55,6 +55,12 @@ namespace scopely.msgpacksharp.tests
 		[MessagePackMember( 14, NilImplication = NilImplication.MemberDefault )]
 		public int? NullableIntThree { get; set; }
 
+		[MessagePackMember(15)]
+		public int[] SomeInts { get; set; }
+
+		[MessagePackMember(16)]
+		public byte[] SomeBytes { get; set; }
+
 		public static AnimalMessage CreateTestMessage()
 		{
 			AnimalMessage msg = new AnimalMessage();
@@ -88,6 +94,14 @@ namespace scopely.msgpacksharp.tests
 			msg.NullableIntOne = null;
 			msg.NullableIntTwo = null;
 			msg.NullableIntThree = 1;
+
+			msg.SomeInts = new int[5];
+			for (int i = 0; i < msg.SomeInts.Length; i++)
+				msg.SomeInts[i] = i;
+
+			msg.SomeBytes = new byte[5];
+			for (int i = 0; i < msg.SomeBytes.Length; i++)
+				msg.SomeBytes[i] = (byte)i;
 
 			return msg;
 		}

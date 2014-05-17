@@ -141,7 +141,39 @@ namespace scopely.msgpacksharp
 			}
 			else if (type.IsArray)
 			{
-				throw new ApplicationException("Raw arrays are not supported by msgpack-sharp");
+				Type elementType = type.GetElementType();
+				byte header = reader.ReadByte();
+				int numElements = 0;
+				if (header != MsgPackConstants.Formats.NIL)
+				{
+					if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+					{
+						numElements = header - MsgPackConstants.FixedArray.MIN;
+					}
+					else if (header == MsgPackConstants.Formats.ARRAY_16)
+					{
+						numElements = (reader.ReadByte() << 8) + 
+							reader.ReadByte();
+					}
+					else if (header == MsgPackConstants.Formats.ARRAY_32)
+					{
+						numElements = (reader.ReadByte() << 24) +
+							(reader.ReadByte() << 16) +
+							(reader.ReadByte() << 8) +
+							reader.ReadByte();
+					}
+					else
+					{
+						throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification at offset " + reader.BaseStream.Position);
+					}
+					var arr = Array.CreateInstance(elementType, numElements);
+					result = arr;
+					for (int i = 0; i < numElements; i++)
+					{
+						object o = DeserializeValue(elementType, reader, NilImplication.MemberDefault);
+						arr.SetValue(Convert.ChangeType(o, elementType), i);
+					}
+				}
 			}
 			else
 			{
@@ -714,7 +746,7 @@ namespace scopely.msgpacksharp
 					Array array = val as Array;
 					if (array == null)
 					{
-						writer.Write((byte)MsgPackConstants.Formats.NIL);
+						throw new ApplicationException("Member can't be serialiazed because it looks like an array but can't be cast to one for " + val);
 					}
 					else
 					{

@@ -139,6 +139,16 @@ namespace scopely.msgpacksharp.tests
 			Assert.IsFalse(restored.NullableIntOne.HasValue);
 			Assert.IsTrue(restored.NullableIntTwo.HasValue);
 			Assert.IsTrue(restored.NullableIntThree.HasValue && msg.NullableIntThree.Value == 1);
+
+			Assert.IsNotNull(restored.SomeInts);
+			Assert.AreEqual(msg.SomeInts.Length, restored.SomeInts.Length);
+			for (int i = 0; i < msg.SomeInts.Length; i++)
+				Assert.AreEqual(msg.SomeInts[i], restored.SomeInts[i]);
+
+			Assert.IsNotNull(restored.SomeBytes);
+			Assert.AreEqual(msg.SomeBytes.Length, restored.SomeBytes.Length);
+			for (int i = 0; i < msg.SomeBytes.Length; i++)
+				Assert.AreEqual(msg.SomeBytes[i], restored.SomeBytes[i]);
 		}
 	}
 }
