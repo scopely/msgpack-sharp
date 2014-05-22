@@ -45,7 +45,7 @@ namespace scopely.msgpacksharp
 
 		internal void Serialize(object o, BinaryWriter writer)
 		{
-			MsgPackIO.SerializeValue(propInfo.GetValue(o, emptyObjArgs), writer);
+            MsgPackIO.SerializeValue(propInfo.GetGetMethod().Invoke(o, emptyObjArgs), writer);
 		}
 			
 		internal void Deserialize(object o, BinaryReader reader)
