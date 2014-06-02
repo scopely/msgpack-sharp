@@ -86,7 +86,9 @@ namespace scopely.msgpacksharp
 				{
 					object key = DeserializeValue(keyType, reader, NilImplication.MemberDefault);
 					object val = DeserializeValue(valueType, reader, NilImplication.MemberDefault);
-					collection.Add(key, val);
+					object safeKey = Convert.ChangeType(key, keyType);
+					object safeVal = Convert.ChangeType(val, valueType);
+					collection.Add(safeKey, safeVal);
 				}
 			}
 			return isNull;
@@ -114,6 +116,10 @@ namespace scopely.msgpacksharp
 					 type == typeof(byte) || type == typeof(sbyte) ||
 	    			 type == typeof(short) || type == typeof(ushort) ||
 					 type == typeof(long) || type == typeof(ulong))
+			{
+				result = ReadMsgPackInt(reader, nilImplication);
+			}
+			else if (type == typeof(char))
 			{
 				result = ReadMsgPackInt(reader, nilImplication);
 			}
@@ -204,7 +210,7 @@ namespace scopely.msgpacksharp
 			byte v = ReadHeader(typeof(double), reader, nilImplication, out result);
 			if (v != MsgPackConstants.Formats.NIL)
 			{
-				if (v != MsgPackConstants.Formats.FLOAT_32)
+				if (v != MsgPackConstants.Formats.FLOAT_64)
 					throw new ApplicationException("Serialized data doesn't match type being deserialized to");
 				byte[] data = reader.ReadBytes(8);
 				if (BitConverter.IsLittleEndian)
@@ -373,6 +379,11 @@ namespace scopely.msgpacksharp
 		{
 			writer.Write(MsgPackConstants.Formats.UINT_8);
 			writer.Write(val);
+		}
+
+		internal static void WriteMsgPack(BinaryWriter writer, char val)
+		{
+			WriteMsgPack(writer, (ushort)val);
 		}
 
 		internal static void WriteMsgPack(BinaryWriter writer, ushort val)
@@ -660,6 +671,10 @@ namespace scopely.msgpacksharp
 				if (t == typeof(string))
 				{
 					WriteMsgPack(writer, (string)val);
+				}
+				else if (t == typeof(char) || t == typeof(System.Char))
+				{
+					WriteMsgPack(writer, (char)val);
 				}
 				else if (t == typeof(float) || t == typeof(Single))
 				{

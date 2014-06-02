@@ -13,11 +13,12 @@ namespace scopely.msgpacksharp.tests
         [Test]
         public void TestDictionary()
         {
-            TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
-            //TestGenericDictionary<int, int>(1, 1);
-
-
-
+			TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
+            TestGenericDictionary<int, int>(1, 1);
+			TestGenericDictionary<float, int>(1.0f, 1);
+			TestGenericDictionary<double, int>(1.0, 1);
+			TestGenericDictionary<byte, int>(1, 1);
+			TestGenericDictionary<char, int>('a', 1);
         }
 
         private void TestGenericDictionary<Key, Value> (Key testKey, Value testValue)
