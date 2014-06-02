@@ -10,6 +10,32 @@ namespace scopely.msgpacksharp.tests
 	[TestFixture]
 	public class SerializationTests
 	{
+        [Test]
+        public void TestDictionary()
+        {
+			TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
+            TestGenericDictionary<int, int>(1, 1);
+			TestGenericDictionary<float, int>(1.0f, 1);
+			TestGenericDictionary<double, int>(1.0, 1);
+			TestGenericDictionary<byte, int>(1, 1);
+			TestGenericDictionary<char, int>('a', 1);
+        }
+
+        private void TestGenericDictionary<Key, Value> (Key testKey, Value testValue)
+        {
+            Dictionary<Key, Value> intDict = new Dictionary<Key, Value>();
+            intDict.Add(testKey, testValue);
+
+            var msg = MsgPackSerializer.SerializeObject(intDict);
+            var desizDict = MsgPackSerializer.Deserialize<Dictionary<Key, Value>>(msg);
+
+            string logHeader = string.Format("<{0}, {1}>: ", typeof(Key).ToString(), typeof(Value).ToString());
+
+            Assert.That(desizDict != null, logHeader + "null desiz");
+            Assert.That(typeof(Dictionary<Key, Value>) == desizDict.GetType(), logHeader + "different types");
+            Assert.That(desizDict[testKey].Equals(testValue),logHeader + "key value lost");
+        }
+
 		[Test]
 		public void TestCompat()
 		{
