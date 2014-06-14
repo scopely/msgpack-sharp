@@ -17,6 +17,24 @@ namespace scopely.msgpacksharp.tests
         }
 
         [Test]
+        public void TestNestedObject ()
+        {
+            var obj = new SerializationTestObject();
+            byte[] msg = MsgPackSerializer.SerializeObject(obj);
+            var desiz = MsgPackSerializer.Deserialize<SerializationTestObject>(msg);
+
+            Assert.That(desiz != null, "No Nesting: null desiz");
+            Assert.That(desiz.Equals(obj), "No Nesting: not equal");
+
+            obj.AddChild();
+            msg = MsgPackSerializer.SerializeObject(obj);
+            desiz = MsgPackSerializer.Deserialize<SerializationTestObject>(msg);
+
+            Assert.That(desiz != null, "Nesting: null desiz");
+            Assert.That(desiz.Equals(obj), "Nesting: not equal");
+        }
+
+        [Test]
         public void TestDictionary()
         {
             TestGenericDictionary<bool, bool>(true, false);
