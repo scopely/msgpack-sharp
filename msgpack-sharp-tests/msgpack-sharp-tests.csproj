@@ -38,6 +38,7 @@
     <Compile Include="AnimalColor.cs" />
     <Compile Include="SerializationTests.cs" />
     <Compile Include="Habitat.cs" />
+    <Compile Include="SerializationTestObject.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
