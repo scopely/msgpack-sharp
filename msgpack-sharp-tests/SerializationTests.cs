@@ -10,15 +10,53 @@ namespace scopely.msgpacksharp.tests
 	[TestFixture]
 	public class SerializationTests
 	{
+        public enum TestEnum
+        {
+            ENTRY_0 = 0,
+            ENTRY_1,
+        }
+
+        [Test]
+        public void TestNestedObject ()
+        {
+            var obj = new SerializationTestObject();
+            byte[] msg = MsgPackSerializer.SerializeObject(obj);
+            var desiz = MsgPackSerializer.Deserialize<SerializationTestObject>(msg);
+
+            Assert.That(desiz != null, "No Nesting: null desiz");
+            Assert.That(desiz.Equals(obj), "No Nesting: not equal");
+
+            obj.AddChild();
+            msg = MsgPackSerializer.SerializeObject(obj);
+            desiz = MsgPackSerializer.Deserialize<SerializationTestObject>(msg);
+
+            Assert.That(desiz != null, "Nesting: null desiz");
+            Assert.That(desiz.Equals(obj), "Nesting: not equal");
+        }
+
         [Test]
         public void TestDictionary()
         {
-			TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
-            TestGenericDictionary<int, int>(1, 1);
-			TestGenericDictionary<float, int>(1.0f, 1);
-			TestGenericDictionary<double, int>(1.0, 1);
-			TestGenericDictionary<byte, int>(1, 1);
-			TestGenericDictionary<char, int>('a', 1);
+            TestGenericDictionary<bool, bool>(true, false);
+            // BREAKS TestGenericDictionary<int, object>(int.MinValue, new object());
+            TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
+            TestGenericDictionary<string, string>("TESTNULLKEY", null);
+            TestGenericDictionary<int, int>(int.MinValue, int.MaxValue);
+            // BREAKS TestGenericDictionary<int, int?>(int.MinValue, null);
+            // BREAKS TestGenericDictionary<uint, uint>(uint.MinValue, uint.MaxValue);
+            TestGenericDictionary<short, short>(short.MinValue, short.MaxValue);
+            TestGenericDictionary<ushort, ushort>(ushort.MinValue, ushort.MaxValue);
+            TestGenericDictionary<long, long>(long.MinValue, long.MaxValue);
+            // BREAKS TestGenericDictionary<ulong, ulong>(ulong.MinValue, ulong.MaxValue);
+			TestGenericDictionary<float, float>(float.MinValue, float.MaxValue);
+            TestGenericDictionary<double, double>(double.MinValue, double.MaxValue);
+            // BREAKS TestGenericDictionary<decimal, decimal>(decimal.MinValue, decimal.MaxValue);
+            TestGenericDictionary<byte, byte>(byte.MinValue, byte.MaxValue);
+            // BREAKS TestGenericDictionary<sbyte, sbyte>(sbyte.MinValue, sbyte.MaxValue);
+            TestGenericDictionary<char, char>(char.MinValue, char.MaxValue);
+            TestGenericDictionary<TestEnum, TestEnum>(TestEnum.ENTRY_0, TestEnum.ENTRY_1);
+            TestGenericDictionary<int, SerializationTestObject>(100, new SerializationTestObject());
+            // BREAKS TestGenericDictionary<int, SerializationTestObject>(100, new SerializationTestObject().AddChild());
         }
 
         private void TestGenericDictionary<Key, Value> (Key testKey, Value testValue)
@@ -29,11 +67,69 @@ namespace scopely.msgpacksharp.tests
             var msg = MsgPackSerializer.SerializeObject(intDict);
             var desizDict = MsgPackSerializer.Deserialize<Dictionary<Key, Value>>(msg);
 
-            string logHeader = string.Format("<{0}, {1}>: ", typeof(Key).ToString(), typeof(Value).ToString());
+            string logHeader = string.Format("Dictionary<{0}, {1}>: ", typeof(Key).ToString(), typeof(Value).ToString());
 
             Assert.That(desizDict != null, logHeader + "null desiz");
             Assert.That(typeof(Dictionary<Key, Value>) == desizDict.GetType(), logHeader + "different types");
-            Assert.That(desizDict[testKey].Equals(testValue),logHeader + "key value lost");
+
+            if (testValue == null)
+            {
+                Assert.That(desizDict[testKey] == null);
+            }
+            else
+            {
+                Assert.That(desizDict[testKey].Equals(testValue), logHeader + "key value lost");
+            }
+        }
+
+        [Test]
+        public void TestList()
+        {
+            TestGenericList<bool>(true, false);
+            // BREAKS TestGenericList<object>(new object(), null);
+            TestGenericList<string>("TESTKEY", "TESTVAL");
+            TestGenericList<string>(null, null);
+            TestGenericList<int>(int.MinValue, int.MaxValue);
+            // BREAKS TestGenericList<int?>(int.MinValue, null);
+            // BREAKS TestGenericList<uint>(uint.MinValue, uint.MaxValue);
+            TestGenericList<short>(short.MinValue, short.MaxValue);
+            TestGenericList<ushort>(ushort.MinValue, ushort.MaxValue);
+            TestGenericList<long>(long.MinValue, long.MaxValue);
+            // BREAKS TestGenericList<ulong>(ulong.MinValue, ulong.MaxValue);
+            TestGenericList<float>(float.MinValue, float.MaxValue);
+            TestGenericList<double>(double.MinValue, double.MaxValue);
+            // BREAKS TestGenericList<decimal>(decimal.MinValue, decimal.MaxValue);
+            TestGenericList<byte>(byte.MinValue, byte.MaxValue);
+            // BREAKS TestGenericList<sbyte>(sbyte.MinValue, sbyte.MaxValue);
+            TestGenericList<char>(char.MinValue, char.MaxValue);
+            TestGenericList<TestEnum>(TestEnum.ENTRY_0, TestEnum.ENTRY_1);
+            TestGenericList<SerializationTestObject>(new SerializationTestObject(), new SerializationTestObject());
+            // BREAKS TestGenericList<SerializationTestObject>(new SerializationTestObject().AddChild(), new SerializationTestObject().AddChild().AddChild());
+        }
+
+        private void TestGenericList<T> (T entry1, T entry2)
+        {
+            List<T> objList = new List<T>();
+            objList.Add(entry1);
+            objList.Add(entry2);
+
+            string logHeader = string.Format("List<{0}>: ", typeof(T).ToString());
+
+            var msg = MsgPackSerializer.SerializeObject(objList);
+            var desizList = MsgPackSerializer.Deserialize<List<T>>(msg);
+
+            Assert.That(desizList != null, logHeader + "null desiz");
+            Assert.That(typeof(List<T>) == desizList.GetType(), logHeader + "different types");
+
+            if (entry1 == null)
+                Assert.That(objList[0] == null);
+            else 
+                Assert.That(desizList[0].Equals(entry1),logHeader + "value lost 1: " + entry1.ToString());
+
+            if (entry2 == null)
+                Assert.That(objList[1] == null);
+            else 
+                Assert.That(desizList[1].Equals(entry2),logHeader + "value lost 2: " + entry2.ToString());
         }
 
 		[Test]
