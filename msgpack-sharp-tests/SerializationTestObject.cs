@@ -97,37 +97,37 @@ namespace scopely.msgpacksharp.tests
             child = null;
         }
 
-        [MessagePackMember(0)] Dictionary<string, string> strDict { get; set; }
-        [MessagePackMember(1)] Dictionary<string, string> nullDict { get; set; }
-        [MessagePackMember(2)] Dictionary<int,int> intDict { get; set; }
-        //[MessagePackMember()] Dictionary<uint,uint> uintDict { get; set; }
-        [MessagePackMember(3)] Dictionary<short,short> shortDict { get; set; }
-        [MessagePackMember(4)] Dictionary<ushort,ushort> ushortDict { get; set; }
-        [MessagePackMember(5)] Dictionary<long,long> longDict { get; set; }
-        //[MessagePackMember()] Dictionary<ulong, ulong> ulongDict { get; set; }
-        [MessagePackMember(6)] Dictionary<float, float> floatDict { get; set; }
-        [MessagePackMember(7)] Dictionary<double, double> doubleDict { get; set; }
-        [MessagePackMember(8)] Dictionary<byte, byte> byteDict { get; set; }
-        //[MessagePackMember()] //Dictionary<sbyte, sbyte> sbyteDict { get; set; }
-        [MessagePackMember(9)] Dictionary<char, char> charDict { get; set; }
-        [MessagePackMember(10)] Dictionary<TestEnum, TestEnum> enumDict { get; set; }
-        [MessagePackMember(11)] List<string> strList { get; set; }
-        [MessagePackMember(12)] List<string> nullList { get; set; }
-        [MessagePackMember(13)] List<int> intList { get; set; }
-        //[MessagePackMember()] List<uint> uintList { get; set; }
-        [MessagePackMember(14)] List<short> shortList { get; set; }
-        [MessagePackMember(15)] List<ushort> ushortList { get; set; }
-        [MessagePackMember(16)] List<long> longList { get; set; }
-        //[MessagePackMember()] List<ulong> ulongList { get; set; }
-        [MessagePackMember(17)] List<float> floatList { get; set; }
-        [MessagePackMember(18)] List<double> doubleList { get; set; }
-        [MessagePackMember(19)] List<byte> byteList { get; set; }
-        //[MessagePackMember()] Listry<sbyte> sbyteList { get; set; }
-        [MessagePackMember(20)] List<char> charList { get; set; }
-        [MessagePackMember(21)] List<TestEnum> enumList { get; set; }
-        [MessagePackMember(22)] SerializationTestObject child { get; set; }
-        [MessagePackMember(23)] Dictionary<bool, bool> boolDict { get; set; }
-        [MessagePackMember(24)] List<bool> boolList { get; set; }
+		[MessagePackMember(0)] public Dictionary<string, string> strDict { get; set; }
+		[MessagePackMember(1)] public Dictionary<string, string> nullDict { get; set; }
+		[MessagePackMember(2)] public Dictionary<int,int> intDict { get; set; }
+		//[MessagePackMember()] public Dictionary<uint,uint> uintDict { get; set; }
+		[MessagePackMember(3)] public Dictionary<short,short> shortDict { get; set; }
+		[MessagePackMember(4)] public Dictionary<ushort,ushort> ushortDict { get; set; }
+		[MessagePackMember(5)] public Dictionary<long,long> longDict { get; set; }
+		//[MessagePackMember()] public Dictionary<ulong, ulong> ulongDict { get; set; }
+		[MessagePackMember(6)] public Dictionary<float, float> floatDict { get; set; }
+		[MessagePackMember(7)] public Dictionary<double, double> doubleDict { get; set; }
+		[MessagePackMember(8)] public Dictionary<byte, byte> byteDict { get; set; }
+		//[MessagePackMember()] public Dictionary<sbyte, sbyte> sbyteDict { get; set; }
+		[MessagePackMember(9)] public Dictionary<char, char> charDict { get; set; }
+		[MessagePackMember(10)] public Dictionary<TestEnum, TestEnum> enumDict { get; set; }
+        [MessagePackMember(11)] public List<string> strList { get; set; }
+        [MessagePackMember(12)] public List<string> nullList { get; set; }
+        [MessagePackMember(13)] public List<int> intList { get; set; }
+        //[MessagePackMember()] public List<uint> uintList { get; set; }
+        [MessagePackMember(14)] public List<short> shortList { get; set; }
+        [MessagePackMember(15)] public List<ushort> ushortList { get; set; }
+        [MessagePackMember(16)] public List<long> longList { get; set; }
+        //[MessagePackMember()] public List<ulong> ulongList { get; set; }
+        [MessagePackMember(17)] public List<float> floatList { get; set; }
+        [MessagePackMember(18)] public List<double> doubleList { get; set; }
+        [MessagePackMember(19)] public List<byte> byteList { get; set; }
+        //[MessagePackMember()] public Listry<sbyte> sbyteList { get; set; }
+        [MessagePackMember(20)] public List<char> charList { get; set; }
+        [MessagePackMember(21)] public List<TestEnum> enumList { get; set; }
+        [MessagePackMember(22)] public SerializationTestObject child { get; set; }
+        [MessagePackMember(23)] public Dictionary<bool, bool> boolDict { get; set; }
+        [MessagePackMember(24)] public List<bool> boolList { get; set; }
 
         public SerializationTestObject AddChild()
         {
