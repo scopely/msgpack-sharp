@@ -133,6 +133,31 @@ namespace scopely.msgpacksharp.tests
         }
 
 		[Test]
+		public void TestDeserializationOfMixedTypeDictionary()
+		{
+			var dictionaryFromJava = "hKVGbG9hdMo/gAAApE51bGygplN0cmluZ6ZzdHJpbmenQm9vbGVhbsI=";
+
+			var obj = new Dictionary<string, object> {
+				{ "Boolean", false }, 
+				{ "String", "string" },
+				{ "Float", 1.0f },
+				{ "Null", null }
+			};
+
+			var msg = MsgPackSerializer.SerializeObject (obj);
+			var base64Msg = Convert.ToBase64String (msg);
+			Console.WriteLine (base64Msg);
+
+			var deserializedDictionary = MsgPackSerializer.Deserialize<Dictionary<string,object>>
+				(Convert.FromBase64String (dictionaryFromJava));
+
+			object value = null;
+			deserializedDictionary.TryGetValue ("Boolean", out value);
+			Assert.That (value.Equals(false));
+		}
+
+
+		[Test]
 		public void TestCompat()
 		{
 			AnimalMessage msg = AnimalMessage.CreateTestMessage();
