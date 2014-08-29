@@ -133,6 +133,41 @@ namespace scopely.msgpacksharp.tests
         }
 
 		[Test]
+		public void TestDeserializationOfMixedTypeDictionary()
+		{
+			var obj = new Dictionary<string, object> {
+				{ "Boolean", false }, 
+				{ "String", "string" },
+				{ "Float", 1.0f },
+				{ "Null", null }
+			};
+
+			var msg = MsgPackSerializer.SerializeObject (obj);
+
+			var deserializedDictionary = MsgPackSerializer.Deserialize<Dictionary<string,object>>(msg);
+
+			object value = null;
+			deserializedDictionary.TryGetValue ("Boolean", out value);
+			Assert.That (value.Equals(false));
+		}
+
+		[Test]
+		public void TestMixedTypeDictionaryRoundTrip() {
+			var obj = new Dictionary<string, object> {
+				{ "Boolean", false }, 
+				{ "String", "string" },
+				{ "Float", 1.0f },
+				{ "Null", null }
+			};
+
+			var msg = MsgPackSerializer.SerializeObject (obj);
+
+			var deserializedDictionary = MsgPackSerializer.Deserialize<Dictionary<string, object>> (msg);
+			Assert.That (deserializedDictionary.ContainsValue (false));
+		}
+
+
+		[Test]
 		public void TestCompat()
 		{
 			AnimalMessage msg = AnimalMessage.CreateTestMessage();

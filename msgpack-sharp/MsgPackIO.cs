@@ -108,14 +108,15 @@ namespace scopely.msgpacksharp
 		{
 			type = Nullable.GetUnderlyingType(type) ?? type;
 			object result = null;
+			bool isRichType = false;
 			if (type == typeof(string))
 			{
 				result = ReadMsgPackString(reader, nilImplication);
 			}
 			else if (type == typeof(int) || type == typeof(uint) ||
-					 type == typeof(byte) || type == typeof(sbyte) ||
-	    			 type == typeof(short) || type == typeof(ushort) ||
-					 type == typeof(long) || type == typeof(ulong))
+			         type == typeof(byte) || type == typeof(sbyte) ||
+			         type == typeof(short) || type == typeof(ushort) ||
+			         type == typeof(long) || type == typeof(ulong))
 			{
 				result = ReadMsgPackInt(reader, nilImplication);
 			}
@@ -149,11 +150,62 @@ namespace scopely.msgpacksharp
 			{
 				throw new ApplicationException("Raw arrays are not supported by msgpack-sharp");
 			}
+			else if (type == typeof(System.Object))
+			{
+				byte header = reader.ReadByte();
+				if (header == MsgPackConstants.Formats.NIL)
+					result = null;
+				else if (header == MsgPackConstants.Bool.TRUE)
+					result = true;
+				else if (header == MsgPackConstants.Bool.FALSE)
+					result = false;
+				else if (header == MsgPackConstants.Formats.FLOAT_64)
+					result = ReadMsgPackDouble(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.FLOAT_32)
+					result = ReadMsgPackFloat(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.INTEGER_16)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.INTEGER_32)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.INTEGER_64)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.INTEGER_8)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.STRING_8)
+					result = ReadMsgPackString(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.STRING_16)
+					result = ReadMsgPackString(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.STRING_32)
+					result = ReadMsgPackString(reader, nilImplication, header);
+				else if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
+					result = ReadMsgPackString(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_8)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_16)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_32)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_64)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header >= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header >= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
+					result = ReadMsgPackInt(reader, nilImplication, header);
+				else
+					isRichType = true;
+			}
 			else
+			{
+				isRichType = true;
+			}
+
+			if (isRichType)
 			{
 				ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
 				if (constructorInfo == null)
+				{
 					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
+				}
 				result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
 				result = MsgPackSerializer.DeserializeObject(result, reader, nilImplication);
 			}
@@ -169,10 +221,14 @@ namespace scopely.msgpacksharp
 				if (nilImplication == NilImplication.MemberDefault)
 				{
 					if (t.IsValueType)
+					{
 						result = Activator.CreateInstance(t);
+					}
 				}
 				else if (nilImplication == NilImplication.Prohibit)
+				{
 					throw new ApplicationException(nullProhibitedExceptionMessage);
+				}
 			}
 			return v;
 		}
@@ -183,15 +239,15 @@ namespace scopely.msgpacksharp
 			byte v = ReadHeader(typeof(bool), reader, nilImplication, out result);
 			if (v != MsgPackConstants.Formats.NIL)
 			{
-				result = v == MsgPackConstants.Bool.TRUE ? true : false;
+				result = v == MsgPackConstants.Bool.TRUE;
 			}
 			return result;
 		}
 
-		internal static object ReadMsgPackFloat(BinaryReader reader, NilImplication nilImplication)
+		internal static object ReadMsgPackFloat(BinaryReader reader, NilImplication nilImplication, byte header = 0)
 		{
-			object result;
-			byte v = ReadHeader(typeof(float), reader, nilImplication, out result);
+			object result = null;
+			byte v = header == 0 ? ReadHeader(typeof(float), reader, nilImplication, out result) : header;
 			if (v != MsgPackConstants.Formats.NIL)
 			{
 				if (v != MsgPackConstants.Formats.FLOAT_32)
@@ -204,10 +260,10 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		internal static object ReadMsgPackDouble(BinaryReader reader, NilImplication nilImplication)
+		internal static object ReadMsgPackDouble(BinaryReader reader, NilImplication nilImplication, byte header = 0)
 		{
-			object result;
-			byte v = ReadHeader(typeof(double), reader, nilImplication, out result);
+			object result = null;
+			byte v = header == 0 ? ReadHeader(typeof(double), reader, nilImplication, out result) : header;
 			if (v != MsgPackConstants.Formats.NIL)
 			{
 				if (v != MsgPackConstants.Formats.FLOAT_64)
@@ -220,10 +276,10 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		internal static object ReadMsgPackULong(BinaryReader reader, NilImplication nilImplication)
+		internal static object ReadMsgPackULong(BinaryReader reader, NilImplication nilImplication, byte header = 0)
 		{
-			object result;
-			byte v = ReadHeader(typeof(ulong), reader, nilImplication, out result);
+			object result = null;
+			byte v = header == 0 ? ReadHeader(typeof(ulong), reader, nilImplication, out result) : header;
 			if (v != MsgPackConstants.Formats.NIL)
 			{
 				if (v != MsgPackConstants.Formats.UINT_64)
@@ -233,10 +289,10 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		internal static object ReadMsgPackInt(BinaryReader reader, NilImplication nilImplication)
+		internal static object ReadMsgPackInt(BinaryReader reader, NilImplication nilImplication, byte header = 0)
 		{
-			object result;
-			byte v = ReadHeader(typeof(long), reader, nilImplication, out result);
+			object result = null;
+			byte v = header == 0 ? ReadHeader(typeof(long), reader, nilImplication, out result) : header;
 			if (v != MsgPackConstants.Formats.NIL)
 			{
 				if (v <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
@@ -305,10 +361,10 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		internal static object ReadMsgPackString(BinaryReader reader, NilImplication nilImplication)
+		internal static object ReadMsgPackString(BinaryReader reader, NilImplication nilImplication, byte header = 0)
 		{
-			object result;
-			byte v = ReadHeader(typeof(string), reader, nilImplication, out result);
+			object result = null;
+			byte v = header == 0 ? ReadHeader(typeof(string), reader, nilImplication, out result) : header;
 			if (v != MsgPackConstants.Formats.NIL)
 			{
 				int length = 0;
