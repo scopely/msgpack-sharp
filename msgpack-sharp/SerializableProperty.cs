@@ -43,11 +43,11 @@ namespace scopely.msgpacksharp
 
 		internal int Sequence { get; set; }
 
-		internal void Serialize(object o, BinaryWriter writer)
+		internal void Serialize(object o, BinaryWriter writer, bool asMap)
 		{
 			// We don't use the simpler propInfo.GetValue because the getter might have been left behind
 			// by AOT
-			MsgPackIO.SerializeValue(propInfo.GetGetMethod().Invoke(o, emptyObjArgs), writer);
+			MsgPackIO.SerializeValue(propInfo.GetGetMethod().Invoke(o, emptyObjArgs), writer, asMap);
 		}
 			
 		internal void Deserialize(object o, BinaryReader reader)
