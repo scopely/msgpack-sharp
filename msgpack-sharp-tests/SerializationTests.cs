@@ -19,8 +19,9 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestAsMaps()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Map;
 			AnimalMessage msg = AnimalMessage.CreateTestMessage();
-			byte[] payload = msg.ToMsgPack(true);
+			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
 			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
@@ -30,6 +31,7 @@ namespace scopely.msgpacksharp.tests
         [Test]
         public void TestNestedObject ()
         {
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
             var obj = new SerializationTestObject();
             byte[] msg = MsgPackSerializer.SerializeObject(obj);
             var desiz = MsgPackSerializer.Deserialize<SerializationTestObject>(msg);
@@ -48,6 +50,7 @@ namespace scopely.msgpacksharp.tests
         [Test]
         public void TestDictionary()
         {
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
             TestGenericDictionary<bool, bool>(true, false);
             // BREAKS TestGenericDictionary<int, object>(int.MinValue, new object());
             TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
@@ -96,6 +99,7 @@ namespace scopely.msgpacksharp.tests
         [Test]
         public void TestList()
         {
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
             TestGenericList<bool>(true, false);
             // BREAKS TestGenericList<object>(new object(), null);
             TestGenericList<string>("TESTKEY", "TESTVAL");
@@ -146,6 +150,7 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestDeserializationOfMixedTypeDictionary()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			var obj = new Dictionary<string, object> {
 				{ "Boolean", false }, 
 				{ "String", "string" },
@@ -163,7 +168,9 @@ namespace scopely.msgpacksharp.tests
 		}
 
 		[Test]
-		public void TestMixedTypeDictionaryRoundTrip() {
+		public void TestMixedTypeDictionaryRoundTrip()
+        {
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			var obj = new Dictionary<string, object> {
 				{ "Boolean", false }, 
 				{ "String", "string" },
@@ -181,6 +188,7 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestCompat()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			AnimalMessage msg = AnimalMessage.CreateTestMessage();
 			byte[] payload = msg.ToMsgPack();
 			string msgFilename = Path.Combine(Environment.CurrentDirectory, "animal.msg");
@@ -196,6 +204,7 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestLimits()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			TestLimit(5);
 			//TestLimit(20);
 		}
@@ -221,6 +230,7 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestNulls()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			var msg = AnimalMessage.CreateTestMessage();
 			msg.AnimalColor = null;
 			byte[] payload = msg.ToMsgPack();
@@ -233,6 +243,7 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestRoundTripPrimitives()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			TestRoundTrip(0);
 			TestRoundTrip(127);
 
@@ -259,6 +270,7 @@ namespace scopely.msgpacksharp.tests
 		[Test]
 		public void TestRoundTripComplexTypes()
 		{
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
 			AnimalMessage msg = AnimalMessage.CreateTestMessage();
 
 			byte[] payload = msg.ToMsgPack();
