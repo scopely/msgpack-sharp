@@ -16,6 +16,17 @@ namespace scopely.msgpacksharp.tests
             ENTRY_1,
         }
 
+		[Test]
+		public void TestAsMaps()
+		{
+			AnimalMessage msg = AnimalMessage.CreateTestMessage();
+			byte[] payload = msg.ToMsgPack();
+			Assert.IsNotNull(payload);
+			Assert.AreNotEqual(0, payload.Length);
+			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
+			VerifyAnimalMessage(msg, restored);
+		}
+
         [Test]
         public void TestNestedObject ()
         {

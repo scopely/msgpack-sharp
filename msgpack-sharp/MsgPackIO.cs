@@ -707,16 +707,16 @@ namespace scopely.msgpacksharp
 			}
 		}
 			
-		internal static void SerializeEnumerable(IEnumerator collection, BinaryWriter writer)
+		internal static void SerializeEnumerable(IEnumerator collection, BinaryWriter writer, bool asMap)
 		{
 			while (collection.MoveNext())
 			{
 				object val = collection.Current;
-				SerializeValue(val, writer);
+				SerializeValue(val, writer, asMap);
 			}
 		}
 			
-		internal static void SerializeValue(object val, BinaryWriter writer)
+		internal static void SerializeValue(object val, BinaryWriter writer, bool asMap)
 		{
 			if (val == null)
 				writer.Write(MsgPackConstants.Formats.NIL);
@@ -810,7 +810,7 @@ namespace scopely.msgpacksharp
 								Array.Reverse(data);
 							writer.Write(data);
 						}
-						SerializeEnumerable(array.GetEnumerator(), writer);
+						SerializeEnumerable(array.GetEnumerator(), writer, asMap);
 					}
 				}
 				else if (MsgPackSerializer.IsGenericList(t))
@@ -843,7 +843,7 @@ namespace scopely.msgpacksharp
 								Array.Reverse(data);
 							writer.Write(data);
 						}
-						SerializeEnumerable(list.GetEnumerator(), writer);
+						SerializeEnumerable(list.GetEnumerator(), writer, asMap);
 					}
 				}
 				else if (MsgPackSerializer.IsGenericDictionary(t))
@@ -879,14 +879,14 @@ namespace scopely.msgpacksharp
 						IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
 						while (enumerator.MoveNext())
 						{
-							SerializeValue(enumerator.Key, writer);
-							SerializeValue(enumerator.Value, writer);
+							SerializeValue(enumerator.Key, writer, asMap);
+							SerializeValue(enumerator.Value, writer, asMap);
 						}
 					}
 				}
 				else
 				{
-					MsgPackSerializer.SerializeObject(val, writer);
+					MsgPackSerializer.SerializeObject(val, writer, asMap);
 				}
 			}
 		}

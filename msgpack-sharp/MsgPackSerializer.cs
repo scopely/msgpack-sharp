@@ -10,6 +10,7 @@ namespace scopely.msgpacksharp
 	public class MsgPackSerializer
 	{
 		private static Dictionary<Type,MsgPackSerializer> serializers = new Dictionary<Type,MsgPackSerializer>();
+		private Dictionary<string,SerializableProperty> propsByName;
 		private List<SerializableProperty> props;
 		private Type serializedType;
 		private static Dictionary<Type,TypeInfo> typeInfos = new Dictionary<Type, TypeInfo>();
@@ -63,24 +64,24 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		public static byte[] SerializeObject(object o)
+		public static byte[] SerializeObject(object o, bool asMap = false)
 		{
-			return GetSerializer(o.GetType()).Serialize(o);
+			return GetSerializer(o.GetType()).Serialize(o, asMap);
 		}
 
-		public static int SerializeObject(object o, byte[] buffer, int offset)
+		public static int SerializeObject(object o, byte[] buffer, int offset, bool asMap = false)
 		{
-			return GetSerializer(o.GetType()).Serialize(o, buffer, offset);
+			return GetSerializer(o.GetType()).Serialize(o, buffer, offset, asMap);
 		}
 
-		public byte[] Serialize(object o)
+		public byte[] Serialize(object o, bool asMap = false)
 		{
 			byte[] result = null;
 			using (MemoryStream stream = new MemoryStream())
 			{
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
-					Serialize(o, writer);
+					Serialize(o, writer, asMap);
 					result = new byte[stream.Position];
 				}
 				result = stream.ToArray();
@@ -88,7 +89,7 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		public int Serialize(object o, byte[] buffer, int offset)
+		public int Serialize(object o, byte[] buffer, int offset, bool asMap = false)
 		{
 			int endPos = 0;
 			using (MemoryStream stream = new MemoryStream(buffer))
@@ -96,7 +97,7 @@ namespace scopely.msgpacksharp
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
 					stream.Seek(offset, SeekOrigin.Begin);
-					Serialize(o, writer);
+					Serialize(o, writer, asMap);
 					endPos = (int)stream.Position;
 				}
 			}
@@ -191,6 +192,8 @@ namespace scopely.msgpacksharp
 			else
 			{
 				bool isArray = false;
+				bool isMap = false;
+				int numElements = 0;
 				if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
 					isArray = true;
 				else if (header == MsgPackConstants.Formats.ARRAY_16)
@@ -207,22 +210,51 @@ namespace scopely.msgpacksharp
 					reader.ReadByte();
 					reader.ReadByte();
 				}
-				if (!isArray)
-					throw new ApplicationException("All objects are expected to begin as arrays for their properties - the serialized data format isn't valid");
-				foreach (SerializableProperty prop in props)
+				else if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
+					isMap = true;
+				else if (header == MsgPackConstants.Formats.MAP_16)
 				{
-					prop.Deserialize(result, reader);
+					isMap = true;
+					numElements = (reader.ReadByte() << 8) + 
+						reader.ReadByte();
+				}
+				else if (header == MsgPackConstants.Formats.MAP_32)
+				{
+					isMap = true;
+					numElements = (reader.ReadByte() << 24) +
+						(reader.ReadByte() << 16) +
+						(reader.ReadByte() << 8) +
+						reader.ReadByte();
+				}
+				if (!isArray && !isMap)
+					throw new ApplicationException("All objects are expected to begin as arrays or maps for their properties - the serialized data format isn't valid");
+				if (isArray)
+				{
+					foreach (SerializableProperty prop in props)
+					{
+						prop.Deserialize(result, reader);
+					}
+				}
+				else
+				{
+					for (int i = 0; i < numElements; i++)
+					{
+						string propName = (string)MsgPackIO.ReadMsgPackString(reader, NilImplication.Null);
+						SerializableProperty propToProcess = null;
+						if (propsByName.TryGetValue(propName, out propToProcess))
+							propToProcess.Deserialize(result, reader);
+					}
 				}
 			}
 			return result;
 		}
 
-		internal static void SerializeObject(object o, BinaryWriter writer)
+		internal static void SerializeObject(object o, BinaryWriter writer, bool asMap)
 		{
-			GetSerializer(o.GetType()).Serialize(o, writer);
+			GetSerializer(o.GetType()).Serialize(o, writer, asMap);
 		}
 
-		private void Serialize(object o, BinaryWriter writer)
+		private void Serialize(object o, BinaryWriter writer, bool asMap)
 		{
 			if (o == null)
 				writer.Write((byte)MsgPackConstants.Formats.NIL);
@@ -232,34 +264,66 @@ namespace scopely.msgpacksharp
 					serializedType == typeof(string) ||
 					IsSerializableGenericCollection(serializedType))
 				{
-					MsgPackIO.SerializeValue(o, writer);
+					MsgPackIO.SerializeValue(o, writer, asMap);
 				}
 				else
 				{
-					if (props.Count <= 15)
+					if (asMap)
 					{
-						byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + props.Count);
-						writer.Write(arrayVal);
-					}
-					else if (props.Count <= UInt16.MaxValue)
-					{
-						writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
-						byte[] data = BitConverter.GetBytes((ushort)props.Count);
-						if (BitConverter.IsLittleEndian)
-							Array.Reverse(data);
-						writer.Write(data);
+						if (props.Count <= 15)
+						{
+							byte arrayVal = (byte)(MsgPackConstants.FixedMap.MIN + props.Count);
+							writer.Write(arrayVal);
+						}
+						else if (props.Count <= UInt16.MaxValue)
+						{
+							writer.Write((byte)MsgPackConstants.Formats.MAP_16);
+							byte[] data = BitConverter.GetBytes((ushort)props.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						else
+						{
+							writer.Write((byte)MsgPackConstants.Formats.MAP_32);
+							byte[] data = BitConverter.GetBytes((uint)props.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						foreach (SerializableProperty prop in props)
+						{
+							MsgPackIO.WriteMsgPack(writer, prop.Name);
+							prop.Serialize(o, writer, asMap);
+						}
 					}
 					else
 					{
-						writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
-						byte[] data = BitConverter.GetBytes((uint)props.Count);
-						if (BitConverter.IsLittleEndian)
-							Array.Reverse(data);
-						writer.Write(data);
-					}
-					foreach (SerializableProperty prop in props)
-					{
-						prop.Serialize(o, writer);
+						if (props.Count <= 15)
+						{
+							byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + props.Count);
+							writer.Write(arrayVal);
+						}
+						else if (props.Count <= UInt16.MaxValue)
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+							byte[] data = BitConverter.GetBytes((ushort)props.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						else
+						{
+							writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+							byte[] data = BitConverter.GetBytes((uint)props.Count);
+							if (BitConverter.IsLittleEndian)
+								Array.Reverse(data);
+							writer.Write(data);
+						}
+						foreach (SerializableProperty prop in props)
+						{
+							prop.Serialize(o, writer, asMap);
+						}
 					}
 				}
 			}
@@ -272,13 +336,16 @@ namespace scopely.msgpacksharp
 				!IsSerializableGenericCollection(serializedType))
 			{
 				props = new List<SerializableProperty>();
+				propsByName = new Dictionary<string, SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
 					object[] customAttributes = prop.GetCustomAttributes(typeof(MsgPack.Serialization.MessagePackMemberAttribute), true);
 					if (customAttributes != null && customAttributes.Length == 1)
 					{
 						MessagePackMemberAttribute att = (MsgPack.Serialization.MessagePackMemberAttribute)customAttributes[0];
-						props.Add(new SerializableProperty(prop, att.Id, att.NilImplication));
+						var serializableProp = new SerializableProperty(prop, att.Id, att.NilImplication);
+						props.Add(serializableProp);
+						propsByName[serializableProp.Name] = serializableProp;
 					}
 				}
 				props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));
