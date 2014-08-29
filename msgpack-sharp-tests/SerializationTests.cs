@@ -20,7 +20,7 @@ namespace scopely.msgpacksharp.tests
 		public void TestAsMaps()
 		{
 			AnimalMessage msg = AnimalMessage.CreateTestMessage();
-			byte[] payload = msg.ToMsgPack();
+			byte[] payload = msg.ToMsgPack(true);
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
 			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);

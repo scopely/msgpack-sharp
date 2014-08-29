@@ -211,7 +211,10 @@ namespace scopely.msgpacksharp
 					reader.ReadByte();
 				}
 				else if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
+				{
 					isMap = true;
+					numElements = header & 0x0F;
+				}
 				else if (header == MsgPackConstants.Formats.MAP_16)
 				{
 					isMap = true;
