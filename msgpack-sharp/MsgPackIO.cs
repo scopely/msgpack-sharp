@@ -206,7 +206,7 @@ namespace scopely.msgpacksharp
 				{
 					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
 				}
-				result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
+				result = constructorInfo.Invoke(SerializableProperty.EmptyObjArgs);
 				result = MsgPackSerializer.DeserializeObject(result, reader, nilImplication);
 			}
 			return result;
@@ -706,17 +706,17 @@ namespace scopely.msgpacksharp
 				}
 			}
 		}
-			
-		internal static void SerializeEnumerable(IEnumerator collection, BinaryWriter writer, bool asMap)
+
+        internal static void SerializeEnumerable(IEnumerator collection, BinaryWriter writer, SerializationMethod serializationMethod)
 		{
 			while (collection.MoveNext())
 			{
 				object val = collection.Current;
-				SerializeValue(val, writer, asMap);
+                SerializeValue(val, writer, serializationMethod);
 			}
 		}
-			
-		internal static void SerializeValue(object val, BinaryWriter writer, bool asMap)
+
+        internal static void SerializeValue(object val, BinaryWriter writer, SerializationMethod serializationMethod)
 		{
 			if (val == null)
 				writer.Write(MsgPackConstants.Formats.NIL);
@@ -810,83 +810,69 @@ namespace scopely.msgpacksharp
 								Array.Reverse(data);
 							writer.Write(data);
 						}
-						SerializeEnumerable(array.GetEnumerator(), writer, asMap);
+                        SerializeEnumerable(array.GetEnumerator(), writer, serializationMethod);
 					}
 				}
 				else if (MsgPackSerializer.IsGenericList(t))
 				{
-					if (val == null)
-					{
-						writer.Write((byte)MsgPackConstants.Formats.NIL);
-					}
-					else
-					{
-						IList list = val as IList;
-						if (list.Count <= 15)
-						{
-							byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + list.Count);
-							writer.Write(arrayVal);
-						}
-						else if (list.Count <= UInt16.MaxValue)
-						{
-							writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
-							byte[] data = BitConverter.GetBytes((ushort)list.Count);
-							if (BitConverter.IsLittleEndian)
-								Array.Reverse(data);
-							writer.Write(data);
-						}
-						else
-						{
-							writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
-							byte[] data = BitConverter.GetBytes((uint)list.Count);
-							if (BitConverter.IsLittleEndian)
-								Array.Reverse(data);
-							writer.Write(data);
-						}
-						SerializeEnumerable(list.GetEnumerator(), writer, asMap);
-					}
+				    IList list = val as IList;
+				    if (list.Count <= 15)
+				    {
+				        byte arrayVal = (byte)(MsgPackConstants.FixedArray.MIN + list.Count);
+				        writer.Write(arrayVal);
+				    }
+				    else if (list.Count <= UInt16.MaxValue)
+				    {
+				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+				        byte[] data = BitConverter.GetBytes((ushort)list.Count);
+				        if (BitConverter.IsLittleEndian)
+				            Array.Reverse(data);
+				        writer.Write(data);
+				    }
+				    else
+				    {
+				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+				        byte[] data = BitConverter.GetBytes((uint)list.Count);
+				        if (BitConverter.IsLittleEndian)
+				            Array.Reverse(data);
+				        writer.Write(data);
+				    }
+				    SerializeEnumerable(list.GetEnumerator(), writer, serializationMethod);
 				}
 				else if (MsgPackSerializer.IsGenericDictionary(t))
 				{
-					if (val == null)
-					{
-						writer.Write((byte)MsgPackConstants.Formats.NIL);
-					}
-					else
-					{
-						IDictionary dictionary = val as IDictionary;
-						if (dictionary.Count <= 15)
-						{
-							byte header = (byte)(MsgPackConstants.FixedMap.MIN + dictionary.Count);
-							writer.Write(header);
-						}
-						else if (dictionary.Count <= UInt16.MaxValue)
-						{
-							writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
-							byte[] data = BitConverter.GetBytes((ushort)dictionary.Count);
-							if (BitConverter.IsLittleEndian)
-								Array.Reverse(data);
-							writer.Write(data);
-						}
-						else
-						{
-							writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
-							byte[] data = BitConverter.GetBytes((uint)dictionary.Count);
-							if (BitConverter.IsLittleEndian)
-								Array.Reverse(data);
-							writer.Write(data);
-						}
-						IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
-						while (enumerator.MoveNext())
-						{
-							SerializeValue(enumerator.Key, writer, asMap);
-							SerializeValue(enumerator.Value, writer, asMap);
-						}
-					}
+				    IDictionary dictionary = val as IDictionary;
+				    if (dictionary.Count <= 15)
+				    {
+				        byte header = (byte)(MsgPackConstants.FixedMap.MIN + dictionary.Count);
+				        writer.Write(header);
+				    }
+				    else if (dictionary.Count <= UInt16.MaxValue)
+				    {
+				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+				        byte[] data = BitConverter.GetBytes((ushort)dictionary.Count);
+				        if (BitConverter.IsLittleEndian)
+				            Array.Reverse(data);
+				        writer.Write(data);
+				    }
+				    else
+				    {
+				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+				        byte[] data = BitConverter.GetBytes((uint)dictionary.Count);
+				        if (BitConverter.IsLittleEndian)
+				            Array.Reverse(data);
+				        writer.Write(data);
+				    }
+				    IDictionaryEnumerator enumerator = dictionary.GetEnumerator();
+				    while (enumerator.MoveNext())
+				    {
+                        SerializeValue(enumerator.Key, writer, serializationMethod);
+                        SerializeValue(enumerator.Value, writer, serializationMethod);
+				    }
 				}
 				else
 				{
-					MsgPackSerializer.SerializeObject(val, writer, asMap);
+                    MsgPackSerializer.SerializeObject(val, writer);
 				}
 			}
 		}

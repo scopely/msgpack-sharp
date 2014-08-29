@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace scopely.msgpacksharp.Extensions
 {
 	public static class ObjectExtensions
 	{
-		public static byte[] ToMsgPack(this object o, bool asMap = false)
+		public static byte[] ToMsgPack(this object o)
 		{
 			if (o == null)
 				throw new ArgumentException("Can't serialize null references", "o");
-			return MsgPackSerializer.SerializeObject(o, asMap);
+			return MsgPackSerializer.SerializeObject(o);
 		}
 	}
 }

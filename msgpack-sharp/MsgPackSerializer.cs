@@ -9,6 +9,7 @@ namespace scopely.msgpacksharp
 {
 	public class MsgPackSerializer
 	{
+        public static readonly SerializationContext DefaultContext = new SerializationContext();
 		private static Dictionary<Type,MsgPackSerializer> serializers = new Dictionary<Type,MsgPackSerializer>();
 		private Dictionary<string,SerializableProperty> propsByName;
 		private List<SerializableProperty> props;
@@ -64,24 +65,24 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		public static byte[] SerializeObject(object o, bool asMap = false)
+		public static byte[] SerializeObject(object o)
 		{
-			return GetSerializer(o.GetType()).Serialize(o, asMap);
+			return GetSerializer(o.GetType()).Serialize(o);
 		}
 
-		public static int SerializeObject(object o, byte[] buffer, int offset, bool asMap = false)
+		public static int SerializeObject(object o, byte[] buffer, int offset)
 		{
-			return GetSerializer(o.GetType()).Serialize(o, buffer, offset, asMap);
+			return GetSerializer(o.GetType()).Serialize(o, buffer, offset);
 		}
 
-		public byte[] Serialize(object o, bool asMap = false)
+		public byte[] Serialize(object o)
 		{
 			byte[] result = null;
 			using (MemoryStream stream = new MemoryStream())
 			{
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
-					Serialize(o, writer, asMap);
+					Serialize(o, writer);
 					result = new byte[stream.Position];
 				}
 				result = stream.ToArray();
@@ -89,7 +90,7 @@ namespace scopely.msgpacksharp
 			return result;
 		}
 
-		public int Serialize(object o, byte[] buffer, int offset, bool asMap = false)
+		public int Serialize(object o, byte[] buffer, int offset)
 		{
 			int endPos = 0;
 			using (MemoryStream stream = new MemoryStream(buffer))
@@ -97,7 +98,7 @@ namespace scopely.msgpacksharp
 				using (BinaryWriter writer = new BinaryWriter(stream))
 				{
 					stream.Seek(offset, SeekOrigin.Begin);
-					Serialize(o, writer, asMap);
+					Serialize(o, writer);
 					endPos = (int)stream.Position;
 				}
 			}
@@ -148,25 +149,20 @@ namespace scopely.msgpacksharp
 
 		internal static object DeserializeObject(object o, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
 		{
-			if (o is IList)
+		    var list = o as IList;
+		    if (list != null)
 			{
-				if (MsgPackIO.DeserializeCollection((IList)o, reader))
-					return null;
-				else
-					return o;
+				return MsgPackIO.DeserializeCollection(list, reader) ? null : o;
 			}
-			else if (o is IDictionary)
-			{
-				if (MsgPackIO.DeserializeCollection((IDictionary)o, reader))
-					return null;
-				else
-					return o;
-			}
-			else
-				return GetSerializer(o.GetType()).Deserialize(o, reader);
+		    var dictionary = o as IDictionary;
+		    if (dictionary != null)
+		    {
+		        return MsgPackIO.DeserializeCollection(dictionary, reader) ? null : o;
+		    }
+		    return GetSerializer(o.GetType()).Deserialize(o, reader);
 		}
 
-		internal static object DeserializeObject(Type type, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
+	    internal static object DeserializeObject(Type type, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
 		{
 			if (type.IsPrimitive || 
 				type == typeof(string) || 
@@ -174,14 +170,11 @@ namespace scopely.msgpacksharp
 			{
 				return MsgPackIO.DeserializeValue(type, reader, nilImplication);
 			}
-			else
-			{
-				ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
-				if (constructorInfo == null)
-					throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
-				object result = constructorInfo.Invoke(SerializableProperty.emptyObjArgs);
-				return GetSerializer(type).Deserialize(result, reader);
-			}
+		    ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
+		    if (constructorInfo == null)
+		        throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
+		    object result = constructorInfo.Invoke(SerializableProperty.EmptyObjArgs);
+		    return GetSerializer(type).Deserialize(result, reader);
 		}
 
 		internal object Deserialize(object result, BinaryReader reader)
@@ -191,73 +184,72 @@ namespace scopely.msgpacksharp
 				result = null;
 			else
 			{
-				bool isArray = false;
-				bool isMap = false;
-				int numElements = 0;
-				if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
-					isArray = true;
-				else if (header == MsgPackConstants.Formats.ARRAY_16)
-				{
-					isArray = true;
-					reader.ReadByte();
-					reader.ReadByte();
-				}
-				else if (header == MsgPackConstants.Formats.ARRAY_32)
-				{
-					isArray = true;
-					reader.ReadByte();
-					reader.ReadByte();
-					reader.ReadByte();
-					reader.ReadByte();
-				}
-				else if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
-				{
-					isMap = true;
-					numElements = header & 0x0F;
-				}
-				else if (header == MsgPackConstants.Formats.MAP_16)
-				{
-					isMap = true;
-					numElements = (reader.ReadByte() << 8) + 
-						reader.ReadByte();
-				}
-				else if (header == MsgPackConstants.Formats.MAP_32)
-				{
-					isMap = true;
-					numElements = (reader.ReadByte() << 24) +
-						(reader.ReadByte() << 16) +
-						(reader.ReadByte() << 8) +
-						reader.ReadByte();
-				}
-				if (!isArray && !isMap)
-					throw new ApplicationException("All objects are expected to begin as arrays or maps for their properties - the serialized data format isn't valid");
-				if (isArray)
-				{
-					foreach (SerializableProperty prop in props)
-					{
-						prop.Deserialize(result, reader);
-					}
-				}
-				else
-				{
-					for (int i = 0; i < numElements; i++)
-					{
-						string propName = (string)MsgPackIO.ReadMsgPackString(reader, NilImplication.Null);
-						SerializableProperty propToProcess = null;
-						if (propsByName.TryGetValue(propName, out propToProcess))
-							propToProcess.Deserialize(result, reader);
-					}
-				}
+			    if (DefaultContext.SerializationMethod == SerializationMethod.Array)
+			    {
+			        if (header == MsgPackConstants.Formats.ARRAY_16)
+			        {
+			            reader.ReadByte();
+			            reader.ReadByte();
+			        }
+			        else if (header == MsgPackConstants.Formats.ARRAY_32)
+			        {
+			            reader.ReadByte();
+			            reader.ReadByte();
+			            reader.ReadByte();
+			            reader.ReadByte();
+			        }
+			        else if (header < MsgPackConstants.FixedArray.MIN || header > MsgPackConstants.FixedArray.MAX)
+			        {
+			            throw new ApplicationException("The serialized array format isn't valid");
+			        }
+
+			        foreach (SerializableProperty prop in props)
+			        {
+			            prop.Deserialize(result, reader);
+			        }
+			    }
+			    else
+			    {
+			        int numElements;
+			        if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
+			        {
+			            numElements = header & 0x0F;
+			        }
+			        else if (header == MsgPackConstants.Formats.MAP_16)
+			        {
+			            numElements = (reader.ReadByte() << 8) +
+			                          reader.ReadByte();
+			        }
+			        else if (header == MsgPackConstants.Formats.MAP_32)
+			        {
+			            numElements = (reader.ReadByte() << 24) +
+			                          (reader.ReadByte() << 16) +
+			                          (reader.ReadByte() << 8) +
+			                          reader.ReadByte();
+			        }
+                    else
+                    {
+                        throw new ApplicationException("The serialized map format isn't valid");
+                    }
+
+			        for (int i = 0; i < numElements; i++)
+			        {
+			            string propName = (string) MsgPackIO.ReadMsgPackString(reader, NilImplication.Null);
+			            SerializableProperty propToProcess = null;
+			            if (propsByName.TryGetValue(propName, out propToProcess))
+			                propToProcess.Deserialize(result, reader);
+			        }
+			    }
 			}
 			return result;
 		}
 
-		internal static void SerializeObject(object o, BinaryWriter writer, bool asMap)
+		internal static void SerializeObject(object o, BinaryWriter writer)
 		{
-			GetSerializer(o.GetType()).Serialize(o, writer, asMap);
+			GetSerializer(o.GetType()).Serialize(o, writer);
 		}
 
-		private void Serialize(object o, BinaryWriter writer, bool asMap)
+		private void Serialize(object o, BinaryWriter writer)
 		{
 			if (o == null)
 				writer.Write((byte)MsgPackConstants.Formats.NIL);
@@ -267,11 +259,11 @@ namespace scopely.msgpacksharp
 					serializedType == typeof(string) ||
 					IsSerializableGenericCollection(serializedType))
 				{
-					MsgPackIO.SerializeValue(o, writer, asMap);
+					MsgPackIO.SerializeValue(o, writer, DefaultContext.SerializationMethod);
 				}
 				else
 				{
-					if (asMap)
+                    if (DefaultContext.SerializationMethod == SerializationMethod.Map)
 					{
 						if (props.Count <= 15)
 						{
@@ -297,7 +289,7 @@ namespace scopely.msgpacksharp
 						foreach (SerializableProperty prop in props)
 						{
 							MsgPackIO.WriteMsgPack(writer, prop.Name);
-							prop.Serialize(o, writer, asMap);
+                            prop.Serialize(o, writer, DefaultContext.SerializationMethod);
 						}
 					}
 					else
@@ -325,7 +317,7 @@ namespace scopely.msgpacksharp
 						}
 						foreach (SerializableProperty prop in props)
 						{
-							prop.Serialize(o, writer, asMap);
+                            prop.Serialize(o, writer, DefaultContext.SerializationMethod);
 						}
 					}
 				}
@@ -342,16 +334,28 @@ namespace scopely.msgpacksharp
 				propsByName = new Dictionary<string, SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
-					object[] customAttributes = prop.GetCustomAttributes(typeof(MsgPack.Serialization.MessagePackMemberAttribute), true);
-					if (customAttributes != null && customAttributes.Length == 1)
-					{
-						MessagePackMemberAttribute att = (MsgPack.Serialization.MessagePackMemberAttribute)customAttributes[0];
-						var serializableProp = new SerializableProperty(prop, att.Id, att.NilImplication);
-						props.Add(serializableProp);
-						propsByName[serializableProp.Name] = serializableProp;
-					}
+				    if (DefaultContext.SerializationMethod == SerializationMethod.Map)
+				    {
+                        var serializableProp = new SerializableProperty(prop);
+                        props.Add(serializableProp);
+				    }
+				    else
+				    {
+                        object[] customAttributes = prop.GetCustomAttributes(typeof(MessagePackMemberAttribute), true);
+                        if (customAttributes.Length == 1)
+                        {
+                            var att = (MessagePackMemberAttribute)customAttributes[0];
+                            var serializableProp = new SerializableProperty(prop, att.Id, att.NilImplication);
+                            props.Add(serializableProp);
+                            propsByName[serializableProp.Name] = serializableProp;
+                        }
+				    }
+					
 				}
-				props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));
+			    if (DefaultContext.SerializationMethod == SerializationMethod.Array)
+			    {
+                    props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));    
+			    }
 			}
 		}
 	}
