@@ -25,7 +25,7 @@ namespace scopely.msgpacksharp.tests
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
 			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
-			VerifyAnimalMessage(msg, restored);
+            VerifyAnimalMessage(msg, restored);
 		}
 
         [Test]
@@ -283,7 +283,7 @@ namespace scopely.msgpacksharp.tests
 			VerifyAnimalMessage(msg, restored);
 		}
 
-		private void VerifyAnimalMessage(AnimalMessage msg, AnimalMessage restored)
+        private void VerifyAnimalMessage(AnimalMessage msg, AnimalMessage restored)
 		{
 			Assert.IsNotNull(restored);
 			Assert.AreEqual(msg.IsAlive, restored.IsAlive);
@@ -316,9 +316,16 @@ namespace scopely.msgpacksharp.tests
 			Assert.AreEqual(msg.CurrentHabitat, restored.CurrentHabitat);
 			Assert.AreEqual(msg.TheLongString, restored.TheLongString);
 
-			Assert.IsFalse(restored.NullableIntOne.HasValue);
-			Assert.IsTrue(restored.NullableIntTwo.HasValue);
-			Assert.IsTrue(restored.NullableIntThree.HasValue && msg.NullableIntThree.Value == 1);
+            Assert.IsFalse(restored.NullableIntOne.HasValue);
+            if (MsgPackSerializer.DefaultContext.SerializationMethod == SerializationMethod.Array)
+            {
+                Assert.IsTrue(restored.NullableIntTwo.HasValue);  
+            }
+            else
+            {
+                Assert.IsFalse(restored.NullableIntTwo.HasValue);
+            }
+            Assert.IsTrue(restored.NullableIntThree.HasValue && msg.NullableIntThree.Value == 1); 
 		}
 	}
 }

@@ -10,14 +10,22 @@ namespace scopely.msgpacksharp
 		internal static readonly object[] EmptyObjArgs = {};
 	    private readonly NilImplication _nilImplication;
 
-        internal SerializableProperty(PropertyInfo propInfo, int sequence = 0, NilImplication nilImplication = NilImplication.MemberDefault)
+        internal SerializableProperty(PropertyInfo propInfo, int sequence = 0, NilImplication? nilImplication = null)
 		{
 			PropInfo = propInfo;
 			Name = propInfo.Name;
-			//this.valueType = propInfo.PropertyType;
-			ValueType = Nullable.GetUnderlyingType(propInfo.PropertyType) ?? propInfo.PropertyType;
-			_nilImplication = nilImplication;
-			Sequence = sequence;
+            _nilImplication = nilImplication ?? NilImplication.MemberDefault;
+            Sequence = sequence;
+			ValueType = propInfo.PropertyType;
+            Type underlyingType = Nullable.GetUnderlyingType(propInfo.PropertyType);
+            if (underlyingType != null)
+            {
+                ValueType = underlyingType;
+                if (nilImplication.HasValue == false)
+                {
+                    _nilImplication = NilImplication.Null;
+                }
+            }
 		}
 
 	    internal PropertyInfo PropInfo { get; private set; }

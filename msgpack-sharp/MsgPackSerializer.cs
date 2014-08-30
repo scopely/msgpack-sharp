@@ -10,7 +10,6 @@ namespace scopely.msgpacksharp
 	public class MsgPackSerializer
 	{
         public static readonly SerializationContext DefaultContext = new SerializationContext();
-		private static Dictionary<Type,MsgPackSerializer> serializers = new Dictionary<Type,MsgPackSerializer>();
 		private Dictionary<string,SerializableProperty> propsByName;
 		private List<SerializableProperty> props;
 		private Type serializedType;
@@ -58,9 +57,9 @@ namespace scopely.msgpacksharp
 		private static MsgPackSerializer GetSerializer(Type t)
 		{
 			MsgPackSerializer result = null;
-			if (!serializers.TryGetValue(t, out result))
+            if (!DefaultContext.Serializers.TryGetValue(t, out result))
 			{
-				result = serializers[t] = new MsgPackSerializer(t);
+                result = DefaultContext.Serializers[t] = new MsgPackSerializer(t);
 			}
 			return result;
 		}
@@ -334,10 +333,10 @@ namespace scopely.msgpacksharp
 				propsByName = new Dictionary<string, SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
+                    SerializableProperty serializableProp = null;
 				    if (DefaultContext.SerializationMethod == SerializationMethod.Map)
 				    {
-                        var serializableProp = new SerializableProperty(prop);
-                        props.Add(serializableProp);
+                        serializableProp = new SerializableProperty(prop);
 				    }
 				    else
 				    {
@@ -345,12 +344,15 @@ namespace scopely.msgpacksharp
                         if (customAttributes.Length == 1)
                         {
                             var att = (MessagePackMemberAttribute)customAttributes[0];
-                            var serializableProp = new SerializableProperty(prop, att.Id, att.NilImplication);
-                            props.Add(serializableProp);
-                            propsByName[serializableProp.Name] = serializableProp;
+                            serializableProp = new SerializableProperty(prop, att.Id, att.NilImplication);
                         }
 				    }
-					
+
+				    if (serializableProp != null)
+				    {
+                        props.Add(serializableProp);
+                        propsByName[serializableProp.Name] = serializableProp;    
+				    }
 				}
 			    if (DefaultContext.SerializationMethod == SerializationMethod.Array)
 			    {
