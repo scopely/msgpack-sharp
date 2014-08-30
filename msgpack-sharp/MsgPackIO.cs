@@ -106,7 +106,6 @@ namespace scopely.msgpacksharp
 
 		internal static object DeserializeValue(Type type, BinaryReader reader, NilImplication nilImplication)
 		{
-			type = Nullable.GetUnderlyingType(type) ?? type;
 			object result = null;
 			bool isRichType = false;
 			if (type == typeof(string))
