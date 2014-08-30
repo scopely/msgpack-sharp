@@ -110,7 +110,7 @@ namespace scopely.msgpacksharp
 			{
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
-					object o = DeserializeObject(typeof(T), reader);
+					object o = DeserializeObjectType(typeof(T), reader);
 					return (T)Convert.ChangeType(o, typeof(T));
 				}
 			}
@@ -128,7 +128,7 @@ namespace scopely.msgpacksharp
 				stream.Seek(offset, SeekOrigin.Begin);
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
-					object o = DeserializeObject(t, reader);
+					object o = DeserializeObjectType(t, reader);
 					return Convert.ChangeType(o, t);
 				}
 			}
@@ -161,7 +161,7 @@ namespace scopely.msgpacksharp
 		    return GetSerializer(o.GetType()).Deserialize(o, reader);
 		}
 
-	    internal static object DeserializeObject(Type type, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
+	    internal static object DeserializeObjectType(Type type, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
 		{
 			if (type.IsPrimitive || 
 				type == typeof(string) || 
