@@ -333,6 +333,11 @@ namespace scopely.msgpacksharp
 				propsByName = new Dictionary<string, SerializableProperty>();
 				foreach (PropertyInfo prop in serializedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				{
+				    if (prop.CanRead == false || prop.CanWrite == false)
+				    {
+				        continue;
+				    }
+
                     SerializableProperty serializableProp = null;
 				    if (DefaultContext.SerializationMethod == SerializationMethod.Map)
 				    {
