@@ -9,7 +9,10 @@ namespace scopely.msgpacksharp
 {
 	public class MsgPackSerializer
 	{
-        public static readonly SerializationContext DefaultContext = new SerializationContext();
+	    public static readonly SerializationContext DefaultContext = new SerializationContext()
+	    {
+	        SerializationMethod = SerializationMethod.Map;
+	    };
 		private Dictionary<string,SerializableProperty> propsByName;
 		private List<SerializableProperty> props;
 		private Type serializedType;
