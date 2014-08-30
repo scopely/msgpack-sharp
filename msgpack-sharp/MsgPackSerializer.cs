@@ -11,7 +11,7 @@ namespace scopely.msgpacksharp
 	{
 	    public static readonly SerializationContext DefaultContext = new SerializationContext()
 	    {
-	        SerializationMethod = SerializationMethod.Map;
+	        SerializationMethod = SerializationMethod.Map
 	    };
 		private Dictionary<string,SerializableProperty> propsByName;
 		private List<SerializableProperty> props;
