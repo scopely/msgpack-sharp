@@ -1,60 +1,53 @@
 ﻿using System;
 using System.Reflection;
 using System.IO;
-using System.Text;
-using System.Collections.Generic;
-using System.Collections;
 using MsgPack.Serialization;
 
 namespace scopely.msgpacksharp
 {
 	internal class SerializableProperty
 	{
-		internal static readonly object[] emptyObjArgs = new object[] {};
-		private PropertyInfo propInfo;
-		private string name;
-		private Type valueType;
-		private NilImplication nilImplication = NilImplication.MemberDefault; 
+		internal static readonly object[] EmptyObjArgs = {};
+	    private readonly NilImplication _nilImplication;
 
-		internal SerializableProperty(PropertyInfo propInfo, int sequence, NilImplication nilImplication)
+        internal SerializableProperty(PropertyInfo propInfo, int sequence = 0, NilImplication? nilImplication = null)
 		{
-			this.propInfo = propInfo;
-			this.name = propInfo.Name;
-			//this.valueType = propInfo.PropertyType;
-			this.valueType = Nullable.GetUnderlyingType(propInfo.PropertyType) ?? propInfo.PropertyType;
-			this.nilImplication = nilImplication;
-			Sequence = sequence;
+			PropInfo = propInfo;
+			Name = propInfo.Name;
+            _nilImplication = nilImplication ?? NilImplication.MemberDefault;
+            Sequence = sequence;
+			ValueType = propInfo.PropertyType;
+            Type underlyingType = Nullable.GetUnderlyingType(propInfo.PropertyType);
+            if (underlyingType != null)
+            {
+                ValueType = underlyingType;
+                if (nilImplication.HasValue == false)
+                {
+                    _nilImplication = NilImplication.Null;
+                }
+            }
 		}
 
-		internal PropertyInfo PropInfo
-		{
-			get { return propInfo; }
-		}
+	    internal PropertyInfo PropInfo { get; private set; }
 
-		internal string Name
-		{
-			get { return name; }
-		}
+	    internal string Name { get; private set; }
 
-		internal Type ValueType
-		{
-			get { return valueType; }
-		}
+	    internal Type ValueType { get; private set; }
 
-		internal int Sequence { get; set; }
+	    internal int Sequence { get; set; }
 
-		internal void Serialize(object o, BinaryWriter writer, bool asMap)
+        internal void Serialize(object o, BinaryWriter writer, SerializationMethod serializationMethod)
 		{
 			// We don't use the simpler propInfo.GetValue because the getter might have been left behind
 			// by AOT
-			MsgPackIO.SerializeValue(propInfo.GetGetMethod().Invoke(o, emptyObjArgs), writer, asMap);
+            MsgPackIO.SerializeValue(PropInfo.GetGetMethod().Invoke(o, EmptyObjArgs), writer, serializationMethod);
 		}
 			
 		internal void Deserialize(object o, BinaryReader reader)
 		{
-			object val = MsgPackIO.DeserializeValue(valueType, reader, nilImplication);
-			object safeValue = (val == null) ? null : Convert.ChangeType(val, valueType);
-			propInfo.SetValue(o, safeValue, emptyObjArgs);
+			object val = MsgPackIO.DeserializeValue(ValueType, reader, _nilImplication);
+			object safeValue = (val == null) ? null : Convert.ChangeType(val, ValueType);
+			PropInfo.SetValue(o, safeValue, EmptyObjArgs);
 		}
 	}
 }
