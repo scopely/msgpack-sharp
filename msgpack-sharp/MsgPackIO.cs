@@ -101,7 +101,7 @@ namespace scopely.msgpacksharp
 
 		internal static DateTime ToDateTime(long value)
 		{
-			return unixEpocUtc.AddMilliseconds(value).ToLocalTime();
+			return unixEpocUtc.AddMilliseconds(value);
 		}
 
 		internal static object DeserializeValue(Type type, BinaryReader reader, NilImplication nilImplication)
