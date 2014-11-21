@@ -114,11 +114,18 @@ namespace scopely.msgpacksharp
 			}
 			else if (type == typeof(int) || type == typeof(uint) ||
 			         type == typeof(byte) || type == typeof(sbyte) ||
-			         type == typeof(short) || type == typeof(ushort) ||
-			         type == typeof(long) || type == typeof(ulong))
+			         type == typeof(short) || type == typeof(ushort))
 			{
 				result = ReadMsgPackInt(reader, nilImplication);
 			}
+            else if(type == typeof(long))
+            {
+                result = (long)ReadMsgPackLong(reader, nilImplication);
+            }
+            else if (type == typeof (ulong))
+            {
+                result = (ulong)ReadMsgPackInt(reader, nilImplication);
+            }
 			else if (type == typeof(char))
 			{
 				result = ReadMsgPackInt(reader, nilImplication);
@@ -137,7 +144,7 @@ namespace scopely.msgpacksharp
 			}
 			else if (type == typeof(DateTime))
 			{
-				long unixEpochTicks = (long)ReadMsgPackInt(reader, nilImplication);
+                long unixEpochTicks = (long)ReadMsgPackLong(reader, nilImplication);
 				result = ToDateTime(unixEpochTicks);
 			}
 			else if (type.IsEnum)
@@ -281,12 +288,44 @@ namespace scopely.msgpacksharp
 			byte v = header == 0 ? ReadHeader(typeof(ulong), reader, nilImplication, out result) : header;
 			if (v != MsgPackConstants.Formats.NIL)
 			{
-				if (v != MsgPackConstants.Formats.UINT_64)
-					throw new ApplicationException("Serialized data doesn't match type being deserialized to");
-				result = reader.ReadUInt64();
+			    if (v == MsgPackConstants.Formats.UINT_64)
+			    {
+			        result = reader.ReadUInt64();
+			    }
+			    else
+			    {
+			        var r = (long)ReadMsgPackLong(reader, nilImplication, header);
+			        result = (ulong) r;
+			    }
 			}
 			return result;
 		}
+
+        internal static object ReadMsgPackLong(BinaryReader reader, NilImplication nilImplication, byte header = 0)
+        {
+            object result = null;
+            byte v = header == 0 ? ReadHeader(typeof(long), reader, nilImplication, out result) : header;
+            if (v != MsgPackConstants.Formats.NIL)
+            {
+                if (v == 0)
+                {
+                    result = v;
+                }
+                else if (v != MsgPackConstants.Formats.INT_64)
+                {
+                    var r = (int)ReadMsgPackInt(reader, nilImplication, v);
+                    result = (long) r;
+                }
+                else
+                {
+                    byte[] data = reader.ReadBytes(8);
+                    if (BitConverter.IsLittleEndian)
+                        Array.Reverse(data);
+                    result = BitConverter.ToInt64(data, 0);
+                }
+            }
+            return result;
+        }
 
 		internal static object ReadMsgPackInt(BinaryReader reader, NilImplication nilImplication, byte header = 0)
 		{
@@ -318,17 +357,6 @@ namespace scopely.msgpacksharp
 						(reader.ReadByte() << 8) + 
 						reader.ReadByte();
 				}
-				else if (v == MsgPackConstants.Formats.UINT_64)
-				{
-					result = (reader.ReadByte() << 56) +
-						(reader.ReadByte() << 48) +
-						(reader.ReadByte() << 40) +
-						(reader.ReadByte() << 32) +
-						(reader.ReadByte() << 24) +
-						(reader.ReadByte() << 16) +
-						(reader.ReadByte() << 8) +
-						reader.ReadByte();
-				}
 				else if (v == MsgPackConstants.Formats.INT_8)
 				{
 					result = reader.ReadSByte();
@@ -346,13 +374,6 @@ namespace scopely.msgpacksharp
 					if (BitConverter.IsLittleEndian)
 						Array.Reverse(data);
 					result = BitConverter.ToInt32(data, 0);
-				}
-				else if (v == MsgPackConstants.Formats.INT_64)
-				{
-					byte[] data = reader.ReadBytes(8);
-					if (BitConverter.IsLittleEndian)
-						Array.Reverse(data);
-					result = BitConverter.ToInt64(data, 0);
 				}
 				else
 					throw new ApplicationException("Serialized data doesn't match type being deserialized to");

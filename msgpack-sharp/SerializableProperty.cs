@@ -45,6 +45,16 @@ namespace scopely.msgpacksharp
 			
 		internal void Deserialize(object o, BinaryReader reader)
 		{
+            // TODO REMOVE THIS
+            // BREAKPOINT IN HERE FOR CULPRIT OF LONG DESERIALIZE PROBLEM
+//		    if (o is WheelOfFortune.Common.Models.Achievements.Achievement)
+//		    {
+//		        if ((o as WheelOfFortune.Common.Models.Achievements.Achievement).MetricQuantity > 0)
+//		        {
+//		            WoFDebug.Log("");
+//		        }
+//		    }
+
 			object val = MsgPackIO.DeserializeValue(ValueType, reader, _nilImplication);
 			object safeValue = (val == null) ? null : Convert.ChangeType(val, ValueType);
 			PropInfo.SetValue(o, safeValue, EmptyObjArgs);
