@@ -171,7 +171,7 @@ namespace scopely.msgpacksharp
 			}
 		    ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
 		    if (constructorInfo == null)
-		        throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
+		        throw new ApplicationException("Can't deserialize Type [" + type + "] in MsgPackSerializer because it has no default constructor");
 		    object result = constructorInfo.Invoke(SerializableProperty.EmptyObjArgs);
 		    return GetSerializer(type).Deserialize(result, reader);
 		}
