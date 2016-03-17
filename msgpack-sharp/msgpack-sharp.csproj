@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>10.0.0</ProductVersion>
+    <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{765753B8-A9EB-4DD1-B0F0-D478E54E9ACB}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -43,6 +43,7 @@
     <Compile Include="SerializationContext.cs" />
     <Compile Include="SerializationMethod.cs" />
     <Compile Include="TypeInfo.cs" />
+    <Compile Include="MessagePackMemberDefinition.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup />

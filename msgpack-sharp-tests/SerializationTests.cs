@@ -273,12 +273,31 @@ namespace scopely.msgpacksharp.tests
 			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
-			Console.Out.WriteLine("Payload is " + payload.Length + " bytes!");
 
 			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
 
 			VerifyAnimalMessage(msg, restored);
 		}
+
+        [Test]
+        public void TestManualConfig()
+        {
+            var tank = new Tank()
+            {
+                Name = "M1",
+                MaxSpeed = 65.0f,
+                Cargo = AnimalMessage.CreateTestMessage()
+            };
+            MsgPackSerializer.DefaultContext.RegisterSerializer<Tank>("MaxSpeed", "Name", "Cargo");
+            byte[] payload = tank.ToMsgPack();
+            Assert.IsNotNull(payload);
+            Assert.AreNotEqual(0, payload.Length);
+            var restoredTank = MsgPackSerializer.Deserialize<Tank>(payload);
+            Assert.IsNotNull(restoredTank);
+            Assert.AreEqual(tank.Name, restoredTank.Name);
+            Assert.AreEqual(tank.MaxSpeed, restoredTank.MaxSpeed);
+            VerifyAnimalMessage(tank.Cargo, restoredTank.Cargo);
+        }
 
         private void VerifyAnimalMessage(AnimalMessage msg, AnimalMessage restored)
 		{
