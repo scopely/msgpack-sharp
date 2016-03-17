@@ -127,10 +127,6 @@ namespace scopely.msgpacksharp
             {
                 result = ReadMsgPackString(reader, nilImplication);
             }
-            /*else if (type == typeof(ulong))
-            {
-                result = ReadMsgPackULong(reader, nilImplication);
-            }*/
 			else if (type == typeof(int) || type == typeof(uint) ||
 			         type == typeof(byte) || type == typeof(sbyte) ||
 			         type == typeof(short) || type == typeof(ushort) ||
