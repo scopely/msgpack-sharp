@@ -135,7 +135,10 @@ namespace scopely.msgpacksharp
 			         type == typeof(byte) || type == typeof(sbyte) ||
 			         type == typeof(short) || type == typeof(ushort) ||
                      type == typeof(long) || type == typeof(ulong) ||
-                     type == typeof(int?))
+                     type == typeof(int?) || type == typeof(uint?) ||
+                     type == typeof(byte?) || type == typeof(sbyte?) ||
+                     type == typeof(short?) || type == typeof(ushort?) ||
+                     type == typeof(long?) || type == typeof(ulong?))
 			{
 				result = ReadMsgPackInt(reader, nilImplication);
 			}
