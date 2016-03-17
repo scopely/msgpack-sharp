@@ -29,7 +29,7 @@ namespace scopely.msgpacksharp.tests
 		}
 
         [Test]
-        public void TestNestedObject ()
+        public void TestNestedObject()
         {
             MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
             var obj = new SerializationTestObject();
@@ -51,26 +51,25 @@ namespace scopely.msgpacksharp.tests
         public void TestDictionary()
         {
             MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
+
+            TestGenericDictionary<int, int?>(1, 1);
+            TestGenericDictionary<int, SerializationTestObject>(100, new SerializationTestObject().AddChild());
+            TestGenericDictionary<sbyte, sbyte>(sbyte.MinValue, sbyte.MaxValue);
             TestGenericDictionary<bool, bool>(true, false);
-            // BREAKS TestGenericDictionary<int, object>(int.MinValue, new object());
             TestGenericDictionary<string, string>("TESTKEY", "TESTVAL");
             TestGenericDictionary<string, string>("TESTNULLKEY", null);
             TestGenericDictionary<int, int>(int.MinValue, int.MaxValue);
-            // BREAKS TestGenericDictionary<int, int?>(int.MinValue, null);
-            // BREAKS TestGenericDictionary<uint, uint>(uint.MinValue, uint.MaxValue);
+            TestGenericDictionary<int, int?>(int.MinValue, null);
+            TestGenericDictionary<uint, uint>(uint.MinValue, uint.MaxValue);
             TestGenericDictionary<short, short>(short.MinValue, short.MaxValue);
             TestGenericDictionary<ushort, ushort>(ushort.MinValue, ushort.MaxValue);
-            TestGenericDictionary<long, long>(long.MinValue, long.MaxValue);
-            // BREAKS TestGenericDictionary<ulong, ulong>(ulong.MinValue, ulong.MaxValue);
-			TestGenericDictionary<float, float>(float.MinValue, float.MaxValue);
+            TestGenericDictionary<long, long>(long.MinValue, long.MaxValue);			
+            TestGenericDictionary<float, float>(float.MinValue, float.MaxValue);
             TestGenericDictionary<double, double>(double.MinValue, double.MaxValue);
-            // BREAKS TestGenericDictionary<decimal, decimal>(decimal.MinValue, decimal.MaxValue);
             TestGenericDictionary<byte, byte>(byte.MinValue, byte.MaxValue);
-            // BREAKS TestGenericDictionary<sbyte, sbyte>(sbyte.MinValue, sbyte.MaxValue);
             TestGenericDictionary<char, char>(char.MinValue, char.MaxValue);
             TestGenericDictionary<TestEnum, TestEnum>(TestEnum.ENTRY_0, TestEnum.ENTRY_1);
             TestGenericDictionary<int, SerializationTestObject>(100, new SerializationTestObject());
-            // BREAKS TestGenericDictionary<int, SerializationTestObject>(100, new SerializationTestObject().AddChild());
         }
 
         private void TestGenericDictionary<Key, Value> (Key testKey, Value testValue)
@@ -92,7 +91,7 @@ namespace scopely.msgpacksharp.tests
             }
             else
             {
-                Assert.That(desizDict[testKey].Equals(testValue), logHeader + "key value lost");
+                Assert.That(desizDict.ContainsKey(testKey) && desizDict[testKey].Equals(testValue), logHeader + "key value lost");
             }
         }
 
@@ -100,26 +99,23 @@ namespace scopely.msgpacksharp.tests
         public void TestList()
         {
             MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
+            TestGenericList<int?>(int.MinValue, null);
             TestGenericList<bool>(true, false);
-            // BREAKS TestGenericList<object>(new object(), null);
             TestGenericList<string>("TESTKEY", "TESTVAL");
             TestGenericList<string>(null, null);
             TestGenericList<int>(int.MinValue, int.MaxValue);
-            // BREAKS TestGenericList<int?>(int.MinValue, null);
-            // BREAKS TestGenericList<uint>(uint.MinValue, uint.MaxValue);
+            TestGenericList<uint>(uint.MinValue, uint.MaxValue);
             TestGenericList<short>(short.MinValue, short.MaxValue);
             TestGenericList<ushort>(ushort.MinValue, ushort.MaxValue);
             TestGenericList<long>(long.MinValue, long.MaxValue);
-            // BREAKS TestGenericList<ulong>(ulong.MinValue, ulong.MaxValue);
             TestGenericList<float>(float.MinValue, float.MaxValue);
             TestGenericList<double>(double.MinValue, double.MaxValue);
-            // BREAKS TestGenericList<decimal>(decimal.MinValue, decimal.MaxValue);
             TestGenericList<byte>(byte.MinValue, byte.MaxValue);
-            // BREAKS TestGenericList<sbyte>(sbyte.MinValue, sbyte.MaxValue);
+            TestGenericList<sbyte>(sbyte.MinValue, sbyte.MaxValue);
             TestGenericList<char>(char.MinValue, char.MaxValue);
             TestGenericList<TestEnum>(TestEnum.ENTRY_0, TestEnum.ENTRY_1);
             TestGenericList<SerializationTestObject>(new SerializationTestObject(), new SerializationTestObject());
-            // BREAKS TestGenericList<SerializationTestObject>(new SerializationTestObject().AddChild(), new SerializationTestObject().AddChild().AddChild());
+            TestGenericList<SerializationTestObject>(new SerializationTestObject().AddChild(), new SerializationTestObject().AddChild().AddChild());
         }
 
         private void TestGenericList<T> (T entry1, T entry2)
@@ -184,8 +180,8 @@ namespace scopely.msgpacksharp.tests
 			Assert.That (deserializedDictionary.ContainsValue (false));
 		}
 
-
 		[Test]
+        [Ignore]
 		public void TestCompat()
 		{
             MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Array;
@@ -194,8 +190,9 @@ namespace scopely.msgpacksharp.tests
 			string msgFilename = Path.Combine(Environment.CurrentDirectory, "animal.msg");
 			string verifierFilename = Path.Combine(Environment.CurrentDirectory, "msgpack-sharp-verifier.exe");
 			File.WriteAllBytes(msgFilename, payload);
-			Process.Start("mono", verifierFilename + " " + msgFilename);
-			Assert.IsTrue(File.Exists(msgFilename + ".out"), "The verifier program that uses other people's msgpack libs failed to successfully handle our message");
+            string args = verifierFilename + " " + msgFilename;
+			Process.Start("mono", args);
+            Assert.IsTrue(File.Exists(msgFilename + ".out"), "The verifier program that uses other people's msgpack libs failed to successfully handle our message while running [mono " + args + "]");
 			payload = File.ReadAllBytes(msgFilename + ".out");
 			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
 			VerifyAnimalMessage(msg, restored);
@@ -276,12 +273,31 @@ namespace scopely.msgpacksharp.tests
 			byte[] payload = msg.ToMsgPack();
 			Assert.IsNotNull(payload);
 			Assert.AreNotEqual(0, payload.Length);
-			Console.Out.WriteLine("Payload is " + payload.Length + " bytes!");
 
 			AnimalMessage restored = MsgPackSerializer.Deserialize<AnimalMessage>(payload);
 
 			VerifyAnimalMessage(msg, restored);
 		}
+
+        [Test]
+        public void TestManualConfig()
+        {
+            var tank = new Tank()
+            {
+                Name = "M1",
+                MaxSpeed = 65.0f,
+                Cargo = AnimalMessage.CreateTestMessage()
+            };
+            MsgPackSerializer.DefaultContext.RegisterSerializer<Tank>("MaxSpeed", "Name", "Cargo");
+            byte[] payload = tank.ToMsgPack();
+            Assert.IsNotNull(payload);
+            Assert.AreNotEqual(0, payload.Length);
+            var restoredTank = MsgPackSerializer.Deserialize<Tank>(payload);
+            Assert.IsNotNull(restoredTank);
+            Assert.AreEqual(tank.Name, restoredTank.Name);
+            Assert.AreEqual(tank.MaxSpeed, restoredTank.MaxSpeed);
+            VerifyAnimalMessage(tank.Cargo, restoredTank.Cargo);
+        }
 
         private void VerifyAnimalMessage(AnimalMessage msg, AnimalMessage restored)
 		{

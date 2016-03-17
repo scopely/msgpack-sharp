@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using MsgPack.Serialization;
 
 namespace scopely.msgpacksharp
 {
@@ -32,6 +33,25 @@ namespace scopely.msgpacksharp
         {
             Serializers = new Dictionary<Type, MsgPackSerializer>();
             _serializationMethod = SerializationMethod.Array;
+        }
+
+        public void RegisterSerializer<T>(IList<MessagePackMemberDefinition> propertyDefinitions)
+        {
+            Serializers[typeof(T)] = new MsgPackSerializer(typeof(T), propertyDefinitions);
+        }
+
+        public void RegisterSerializer<T>(params string[] propertyNames)
+        {
+            var defs = new List<MessagePackMemberDefinition>();
+            foreach (var propertyName in propertyNames)
+            {
+                defs.Add(new MessagePackMemberDefinition()
+                {
+                    PropertyName = propertyName,
+                    NilImplication = NilImplication.MemberDefault
+                });
+            }
+            Serializers[typeof(T)] = new MsgPackSerializer(typeof(T), defs);
         }
     }
 }

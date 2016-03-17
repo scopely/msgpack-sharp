@@ -45,8 +45,16 @@ namespace scopely.msgpacksharp
 				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
-					object o = DeserializeValue(elementType, reader, NilImplication.MemberDefault);
-					collection.Add(Convert.ChangeType(o, elementType));
+                    object o = DeserializeValue(elementType, reader, NilImplication.Null);
+                    object safeVal = null;
+                    if (o != null)
+                    {
+                        if (elementType.IsGenericType && elementType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                            safeVal = Convert.ChangeType(o, Nullable.GetUnderlyingType(elementType));
+                        else
+                            safeVal = Convert.ChangeType(o, elementType);
+                    }
+                    collection.Add(safeVal);
 				}
 			}
 			return isNull;
@@ -85,9 +93,16 @@ namespace scopely.msgpacksharp
 				for (int i = 0; i < numElements; i++)
 				{
 					object key = DeserializeValue(keyType, reader, NilImplication.MemberDefault);
-					object val = DeserializeValue(valueType, reader, NilImplication.MemberDefault);
+                    object val = DeserializeValue(valueType, reader, NilImplication.Null);
 					object safeKey = Convert.ChangeType(key, keyType);
-					object safeVal = Convert.ChangeType(val, valueType);
+                    object safeVal = null;
+                    if (val != null)
+                    {
+                        if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                            safeVal = Convert.ChangeType(val, Nullable.GetUnderlyingType(valueType));
+                        else
+                            safeVal = Convert.ChangeType(val, valueType);
+                    }
 					collection.Add(safeKey, safeVal);
 				}
 			}
@@ -108,14 +123,18 @@ namespace scopely.msgpacksharp
 		{
 			object result = null;
 			bool isRichType = false;
-			if (type == typeof(string))
-			{
-				result = ReadMsgPackString(reader, nilImplication);
-			}
+            if (type == typeof(string))
+            {
+                result = ReadMsgPackString(reader, nilImplication);
+            }
 			else if (type == typeof(int) || type == typeof(uint) ||
 			         type == typeof(byte) || type == typeof(sbyte) ||
 			         type == typeof(short) || type == typeof(ushort) ||
-			         type == typeof(long) || type == typeof(ulong))
+                     type == typeof(long) || type == typeof(ulong) ||
+                     type == typeof(int?) || type == typeof(uint?) ||
+                     type == typeof(byte?) || type == typeof(sbyte?) ||
+                     type == typeof(short?) || type == typeof(ushort?) ||
+                     type == typeof(long?) || type == typeof(ulong?))
 			{
 				result = ReadMsgPackInt(reader, nilImplication);
 			}
@@ -186,9 +205,14 @@ namespace scopely.msgpacksharp
 					result = ReadMsgPackInt(reader, nilImplication, header);
 				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_64)
 					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header >= MsgPackConstants.FixedInteger.POSITIVE_MAX)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header >= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
+				else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+				{
+					if (header == 0)
+						result = 0;
+					else
+						result = ReadMsgPackInt(reader, nilImplication, header);
+				}
+				else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header <= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
 					result = ReadMsgPackInt(reader, nilImplication, header);
 				else
 					isRichType = true;
@@ -313,21 +337,21 @@ namespace scopely.msgpacksharp
 				}
 				else if (v == MsgPackConstants.Formats.UINT_32)
 				{
-					result = (reader.ReadByte() << 24) + 
-						(reader.ReadByte() << 16) + 
-						(reader.ReadByte() << 8) + 
-						reader.ReadByte();
+                    result = (uint)(reader.ReadByte() << 24) + 
+                        (uint)(reader.ReadByte() << 16) + 
+                        (uint)(reader.ReadByte() << 8) + 
+                        (uint)reader.ReadByte();
 				}
 				else if (v == MsgPackConstants.Formats.UINT_64)
 				{
-					result = (reader.ReadByte() << 56) +
-						(reader.ReadByte() << 48) +
-						(reader.ReadByte() << 40) +
-						(reader.ReadByte() << 32) +
-						(reader.ReadByte() << 24) +
-						(reader.ReadByte() << 16) +
-						(reader.ReadByte() << 8) +
-						reader.ReadByte();
+                    result = (ulong)(reader.ReadByte() << 56) +
+                        (ulong)(reader.ReadByte() << 48) +
+                        (ulong)(reader.ReadByte() << 40) +
+                        (ulong)(reader.ReadByte() << 32) +
+                        (ulong)(reader.ReadByte() << 24) +
+                        (ulong)(reader.ReadByte() << 16) +
+                        (ulong)(reader.ReadByte() << 8) +
+                        (ulong)reader.ReadByte();
 				}
 				else if (v == MsgPackConstants.Formats.INT_8)
 				{
@@ -723,58 +747,66 @@ namespace scopely.msgpacksharp
 			{
 				Type t = val.GetType();
 				t = Nullable.GetUnderlyingType(t) ?? t;
-				if (t == typeof(string))
-				{
-					WriteMsgPack(writer, (string)val);
-				}
-				else if (t == typeof(char) || t == typeof(System.Char))
-				{
-					WriteMsgPack(writer, (char)val);
-				}
-				else if (t == typeof(float) || t == typeof(Single))
-				{
-					WriteMsgPack(writer, (float)val);
-				}
-				else if (t == typeof(double) || t == typeof(Double))
-				{
-					WriteMsgPack(writer, (double)val);
-				}
-				else if (t == typeof(byte) || t == typeof(Byte))
-				{
-					WriteMsgPack(writer, (byte)val);
-				}
-				else if (t == typeof(short) || t == (typeof(Int16)))
-				{
-					WriteMsgPack(writer, (short)val);
-				}
-				else if (t == typeof(ushort) || t == (typeof(UInt16)))
-				{
-					WriteMsgPack(writer, (ushort)val);
-				}
-				else if (t == typeof(int) || t == (typeof(Int32)))
-				{
-					WriteMsgPack(writer, (int)val);
-				}
-				else if (t == typeof(uint) || t == (typeof(UInt32)))
-				{
-					WriteMsgPack(writer, (uint)val);
-				}
-				else if (t == typeof(long) || t == (typeof(Int64)))
-				{
-					WriteMsgPack(writer, (long)val);
-				}
-				else if (t == typeof(ulong) || t == (typeof(UInt64)))
-				{
-					WriteMsgPack(writer, (ulong)val);
-				}
-				else if (t == typeof(bool) || t == (typeof(Boolean)))
-				{
-					WriteMsgPack(writer, (bool)val);
-				}
-				else if (t == typeof(DateTime))
-				{
-					WriteMsgPack(writer, (DateTime)val);
-				}
+                if (t == typeof(string))
+                {
+                    WriteMsgPack(writer, (string)val);
+                }
+                else if (t == typeof(char) || t == typeof(System.Char))
+                {
+                    WriteMsgPack(writer, (char)val);
+                }
+                else if (t == typeof(float) || t == typeof(Single))
+                {
+                    WriteMsgPack(writer, (float)val);
+                }
+                else if (t == typeof(double) || t == typeof(Double))
+                {
+                    WriteMsgPack(writer, (double)val);
+                }
+                else if (t == typeof(byte) || t == typeof(Byte))
+                {
+                    WriteMsgPack(writer, (byte)val);
+                }
+                else if (t == typeof(sbyte) || t == typeof(SByte))
+                {
+                    WriteMsgPack(writer, (sbyte)val);
+                }
+                else if (t == typeof(short) || t == (typeof(Int16)))
+                {
+                    WriteMsgPack(writer, (short)val);
+                }
+                else if (t == typeof(ushort) || t == (typeof(UInt16)))
+                {
+                    WriteMsgPack(writer, (ushort)val);
+                }
+                else if (t == typeof(int) || t == (typeof(Int32)))
+                {
+                    WriteMsgPack(writer, (int)val);
+                }
+                else if (t == typeof(uint) || t == (typeof(UInt32)))
+                {
+                    WriteMsgPack(writer, (uint)val);
+                }
+                else if (t == typeof(long) || t == (typeof(Int64)))
+                {
+                    WriteMsgPack(writer, (long)val);
+                }
+                else if (t == typeof(ulong) || t == (typeof(UInt64)))
+                {
+                    WriteMsgPack(writer, (ulong)val);
+                }
+                else if (t == typeof(bool) || t == (typeof(Boolean)))
+                {
+                    WriteMsgPack(writer, (bool)val);
+                }
+                else if (t == typeof(DateTime))
+                {
+                    WriteMsgPack(writer, (DateTime)val);
+                }
+                else if (t == typeof(decimal))
+                {
+                    throw new ApplicationException("The Decimal Type isn't supported");
+                }
 				else if (t.IsEnum)
 				{
 					WriteMsgPack(writer, Enum.GetName(t, val));
@@ -848,7 +880,7 @@ namespace scopely.msgpacksharp
 				    }
 				    else if (dictionary.Count <= UInt16.MaxValue)
 				    {
-				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+				        writer.Write((byte)MsgPackConstants.Formats.MAP_16);
 				        byte[] data = BitConverter.GetBytes((ushort)dictionary.Count);
 				        if (BitConverter.IsLittleEndian)
 				            Array.Reverse(data);
@@ -856,7 +888,7 @@ namespace scopely.msgpacksharp
 				    }
 				    else
 				    {
-				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+				        writer.Write((byte)MsgPackConstants.Formats.MAP_32);
 				        byte[] data = BitConverter.GetBytes((uint)dictionary.Count);
 				        if (BitConverter.IsLittleEndian)
 				            Array.Reverse(data);

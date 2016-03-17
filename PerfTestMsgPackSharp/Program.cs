@@ -11,7 +11,8 @@ namespace PerfTest
 		private static AnimalMessage testMsg;
 
 		public static void Main(string[] args)
-		{
+		{            
+            MsgPackSerializer.DefaultContext.SerializationMethod = SerializationMethod.Map;
 			testMsg = AnimalMessage.CreateTestMessage();
 
 			// Warm-up for both

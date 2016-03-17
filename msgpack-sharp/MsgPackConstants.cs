@@ -37,7 +37,7 @@ namespace scopely.msgpacksharp
             public const byte STR_32 = 0xdb;
             public const byte STRING_32 = 0xdb;
 			public const byte ARRAY_16 = 0xdc;
-			public const byte ARRAY_32 = 0xdf;
+			public const byte ARRAY_32 = 0xdd;
 			public const byte MAP_16 = 0xde;
 			public const byte MAP_32 = 0xdf;
         }

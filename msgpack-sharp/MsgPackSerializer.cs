@@ -21,6 +21,12 @@ namespace scopely.msgpacksharp
 			BuildMap();
 		}
 
+        public MsgPackSerializer(Type type, IList<MessagePackMemberDefinition> propertyDefinitions)
+        {
+            serializedType = type;
+            BuildMap(propertyDefinitions);
+        }
+
 		internal static bool IsGenericList(Type type)
 		{
 			TypeInfo info = null;
@@ -171,7 +177,7 @@ namespace scopely.msgpacksharp
 			}
 		    ConstructorInfo constructorInfo = type.GetConstructor(Type.EmptyTypes);
 		    if (constructorInfo == null)
-		        throw new ApplicationException("Can't deserialize Type [" + type + "] because it has no default constructor");
+		        throw new ApplicationException("Can't deserialize Type [" + type + "] in MsgPackSerializer because it has no default constructor");
 		    object result = constructorInfo.Invoke(SerializableProperty.EmptyObjArgs);
 		    return GetSerializer(type).Deserialize(result, reader);
 		}
@@ -199,7 +205,7 @@ namespace scopely.msgpacksharp
 			        }
 			        else if (header < MsgPackConstants.FixedArray.MIN || header > MsgPackConstants.FixedArray.MAX)
 			        {
-			            throw new ApplicationException("The serialized array format isn't valid");
+			            throw new ApplicationException("The serialized array format isn't valid for header [" + header + "]");
 			        }
 
 			        foreach (SerializableProperty prop in props)
@@ -365,6 +371,47 @@ namespace scopely.msgpacksharp
 			    }
 			}
 		}
+
+        private void BuildMap(IList<MessagePackMemberDefinition> propertyDefinitions)
+        {
+            if (!serializedType.IsPrimitive && 
+                serializedType != typeof(string) &&
+                !IsSerializableGenericCollection(serializedType))
+            {
+                props = new List<SerializableProperty>();
+                propsByName = new Dictionary<string, SerializableProperty>();
+                int id = 1;
+                foreach(MessagePackMemberDefinition def in propertyDefinitions)
+                {
+                    PropertyInfo prop = serializedType.GetProperty(def.PropertyName);
+
+                    if (prop == null || !prop.CanRead || !prop.CanWrite)
+                    {
+                        continue;
+                    }
+
+                    SerializableProperty serializableProp = null;
+                    if (DefaultContext.SerializationMethod == SerializationMethod.Map)
+                    {
+                        serializableProp = new SerializableProperty(prop);
+                    }
+                    else
+                    {
+                        serializableProp = new SerializableProperty(prop, id++, def.NilImplication);
+                    }
+
+                    if (serializableProp != null)
+                    {
+                        props.Add(serializableProp);
+                        propsByName[serializableProp.Name] = serializableProp;    
+                    }
+                }
+                if (DefaultContext.SerializationMethod == SerializationMethod.Array)
+                {
+                    props.Sort((x, y) => (x.Sequence.CompareTo(y.Sequence)));    
+                }
+            }
+        }
 	}
 }
 
