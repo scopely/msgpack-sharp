@@ -199,7 +199,7 @@ namespace scopely.msgpacksharp
 			        }
 			        else if (header < MsgPackConstants.FixedArray.MIN || header > MsgPackConstants.FixedArray.MAX)
 			        {
-			            throw new ApplicationException("The serialized array format isn't valid");
+			            throw new ApplicationException("The serialized array format isn't valid for header [" + header + "]");
 			        }
 
 			        foreach (SerializableProperty prop in props)

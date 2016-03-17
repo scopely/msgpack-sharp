@@ -49,6 +49,11 @@ namespace scopely.msgpacksharp
 			object safeValue = (val == null) ? null : Convert.ChangeType(val, ValueType);
 			PropInfo.SetValue(o, safeValue, EmptyObjArgs);
 		}
+
+		public override string ToString ()
+		{
+			return string.Format ("[SerializableProperty: Name:{0} ValueType:{1}]", Name, ValueType);
+		}
 	}
 }
 

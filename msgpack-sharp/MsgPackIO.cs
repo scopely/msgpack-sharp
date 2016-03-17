@@ -186,9 +186,14 @@ namespace scopely.msgpacksharp
 					result = ReadMsgPackInt(reader, nilImplication, header);
 				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_64)
 					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header >= MsgPackConstants.FixedInteger.POSITIVE_MAX)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header >= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
+				else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+				{
+					if (header == 0)
+						result = 0;
+					else
+						result = ReadMsgPackInt(reader, nilImplication, header);
+				}
+				else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header <= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
 					result = ReadMsgPackInt(reader, nilImplication, header);
 				else
 					isRichType = true;
@@ -743,6 +748,10 @@ namespace scopely.msgpacksharp
 				{
 					WriteMsgPack(writer, (byte)val);
 				}
+				else if (t == typeof(sbyte) || t == typeof(SByte))
+				{
+					WriteMsgPack(writer, (sbyte)val);
+				}
 				else if (t == typeof(short) || t == (typeof(Int16)))
 				{
 					WriteMsgPack(writer, (short)val);
@@ -848,7 +857,7 @@ namespace scopely.msgpacksharp
 				    }
 				    else if (dictionary.Count <= UInt16.MaxValue)
 				    {
-				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_16);
+				        writer.Write((byte)MsgPackConstants.Formats.MAP_16);
 				        byte[] data = BitConverter.GetBytes((ushort)dictionary.Count);
 				        if (BitConverter.IsLittleEndian)
 				            Array.Reverse(data);
@@ -856,7 +865,7 @@ namespace scopely.msgpacksharp
 				    }
 				    else
 				    {
-				        writer.Write((byte)MsgPackConstants.Formats.ARRAY_32);
+				        writer.Write((byte)MsgPackConstants.Formats.MAP_32);
 				        byte[] data = BitConverter.GetBytes((uint)dictionary.Count);
 				        if (BitConverter.IsLittleEndian)
 				            Array.Reverse(data);
