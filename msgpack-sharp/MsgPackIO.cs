@@ -200,8 +200,23 @@ namespace scopely.msgpacksharp
 			}
 			else if (type.IsEnum)
 			{
-				string enumVal = (string)ReadMsgPackString(reader, nilImplication);
-				result = Enum.Parse(type, enumVal);
+                object boxedVal = ReadMsgPackString(reader, nilImplication);
+                if (boxedVal == null)
+                {
+                    result = null;
+                }
+                else
+                {
+                    string enumVal = (string)boxedVal;
+                    if (enumVal == "")
+                    {
+                        result = null;
+                    }
+                    else
+                    {
+                        result = Enum.Parse(type, enumVal);
+                    }
+                }
 			}
 			else if (type.IsArray)
 			{
