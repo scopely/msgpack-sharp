@@ -11,7 +11,7 @@ namespace scopely.msgpacksharp.tests
 	[TestFixture]
 	public class SerializationTests
 	{
-        private volatile int numVerified;
+        private int numVerified;
 
         public enum TestEnum
         {
@@ -389,7 +389,7 @@ namespace scopely.msgpacksharp.tests
                 byte[] buffer = input.ToMsgPack();
                 if (verify)
                     VerifyAnimalMessage(input, MsgPackSerializer.Deserialize<AnimalMessage>(buffer));
-                numVerified++;
+                Interlocked.Increment(ref numVerified);
             }
         }
 
