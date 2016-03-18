@@ -353,7 +353,6 @@ namespace scopely.msgpacksharp.tests
         }
 
         [Test]
-        [Ignore("Only use this test locally, don't make CI providers angry")]
         public void TestMultiThreading()
         {
             const int numTestIterations = 5;
@@ -377,7 +376,7 @@ namespace scopely.msgpacksharp.tests
                 }
                 foreach (var thread in threads)
                 {
-                    thread.Join(5000);
+                    thread.Join(20000);
                 }
                 Assert.AreEqual(numThreads * numPerThread, numVerified);
             }
