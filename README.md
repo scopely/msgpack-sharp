@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/scopely/msgpack-sharp.svg?branch=master)](https://travis-ci.org/scopely/msgpack-sharp)
+
 Overview
 =============
 A lightweight, high performance [MessagePack](http://msgpack.org/) framework for the CLR that works in constrained environments like AOT under Unity and Xamarin.
