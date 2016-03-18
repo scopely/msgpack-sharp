@@ -48,7 +48,7 @@ It uses reflection to discover the memory layout of classes for reading and writ
 
 Scope and Limitations
 =============
-This framework is built to be fast and useful, not exhaustive. It supports any referential hierarchy of complex types (your own classes). But the only collections that it supports are `List<T>` and `Dictionary<T,U>`. It does not support raw arrays. It supports the following primitives:
+This framework is built to be fast and useful, not exhaustive. It supports any referential hierarchy of complex types (your own classes). But the only collections that it supports are `List<T>` and `Dictionary<T,U>`. It now also supports raw arrays. It supports the following primitives:
 * Strings of any length
 * float and double
 * sbyte, byte, ushort, short, uint, int, ulong, long
