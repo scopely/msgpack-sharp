@@ -1,0 +1,9 @@
+language: csharp
+solution: msgpack-sharp.sln
+install:
+  - nuget restore msgpack-sharp.sln
+  - nuget install NUnit.Runners -Version 2.6.4 -OutputDirectory testrunner
+script:
+  - xbuild /p:Configuration=Release msgpack-sharp.sln
+  - mono ./testrunner/NUnit.Runners.2.6.4/tools/nunit-console.exe msgpack-sharp-tests/bin/Release/msgpack-sharp-tests.dll
+

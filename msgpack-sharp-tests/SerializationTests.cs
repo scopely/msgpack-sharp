@@ -11,12 +11,28 @@ namespace scopely.msgpacksharp.tests
 	[TestFixture]
 	public class SerializationTests
 	{
-        private volatile int numVerified;
+        private int numVerified;
 
         public enum TestEnum
         {
             ENTRY_0 = 0,
             ENTRY_1,
+        }
+
+        [Test]
+        public void RoundTripNestedDictionary()
+        {
+            var parent = new Dictionary<string,object>();
+            var child = new Dictionary<string,object>();
+            child["Foo"] = "Bar";
+            parent["Child"] = child;
+            byte[] buffer = parent.ToMsgPack();
+            var restored = MsgPackSerializer.Deserialize<Dictionary<string,object>>(buffer);
+            Assert.IsNotNull(restored);
+            Assert.AreEqual(1, restored.Count);
+            Assert.IsTrue(restored.ContainsKey("Child"));
+            Assert.IsTrue(restored["Child"] is Dictionary<string,object>);
+            Assert.AreEqual("Bar", ((Dictionary<string,object>)restored["Child"])["Foo"]);
         }
 
 		[Test]
@@ -360,7 +376,7 @@ namespace scopely.msgpacksharp.tests
                 }
                 foreach (var thread in threads)
                 {
-                    thread.Join(5000);
+                    thread.Join(20000);
                 }
                 Assert.AreEqual(numThreads * numPerThread, numVerified);
             }
@@ -373,7 +389,7 @@ namespace scopely.msgpacksharp.tests
                 byte[] buffer = input.ToMsgPack();
                 if (verify)
                     VerifyAnimalMessage(input, MsgPackSerializer.Deserialize<AnimalMessage>(buffer));
-                numVerified++;
+                Interlocked.Increment(ref numVerified);
             }
         }
 
