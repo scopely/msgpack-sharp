@@ -353,6 +353,7 @@ namespace scopely.msgpacksharp.tests
         }
 
         [Test]
+        [Ignore("Only use this test locally, don't make CI providers angry")]
         public void TestMultiThreading()
         {
             const int numTestIterations = 5;
