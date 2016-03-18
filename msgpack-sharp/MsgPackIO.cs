@@ -145,10 +145,20 @@ namespace scopely.msgpacksharp
 			return (long)dateTime.ToUniversalTime().Subtract(unixEpocUtc).TotalMilliseconds;
 		}
 
+        internal static long ToUnixMillis(TimeSpan span)
+        {
+            return (long)span.TotalMilliseconds;
+        }
+
 		internal static DateTime ToDateTime(long value)
 		{
 			return unixEpocUtc.AddMilliseconds(value).ToLocalTime();
 		}
+
+        internal static TimeSpan ToTimeSpan(long value)
+        {
+            return new TimeSpan(0, 0, 0, 0, (int)value);
+        }
 
 		internal static object DeserializeValue(Type type, BinaryReader reader, NilImplication nilImplication)
 		{
@@ -198,6 +208,19 @@ namespace scopely.msgpacksharp
                     result = ToDateTime(unixEpochTicks);
                 }
 			}
+            else if (type == typeof(TimeSpan))
+            {
+                object boxedVal = ReadMsgPackInt(reader, nilImplication);
+                if (boxedVal == null)
+                {
+                    result = null;
+                }
+                else
+                {
+                    int unixEpochTicks = (int)boxedVal;
+                    result = ToTimeSpan(unixEpochTicks);
+                }
+            }
 			else if (type.IsEnum)
 			{
                 object boxedVal = ReadMsgPackString(reader, nilImplication);
@@ -516,6 +539,11 @@ namespace scopely.msgpacksharp
 		{
 			WriteMsgPack(writer, ToUnixMillis(val));
 		}
+
+        internal static void WriteMsgPack(BinaryWriter writer, TimeSpan val)
+        {
+            WriteMsgPack(writer, ToUnixMillis(val));
+        }
 
 		internal static void WriteMsgPack(BinaryWriter writer, sbyte val)
 		{
@@ -871,6 +899,10 @@ namespace scopely.msgpacksharp
                 else if (t == typeof(DateTime))
                 {
                     WriteMsgPack(writer, (DateTime)val);
+                }
+                else if (t == typeof(TimeSpan))
+                {
+                    WriteMsgPack(writer, (TimeSpan)val);
                 }
                 else if (t == typeof(decimal))
                 {
