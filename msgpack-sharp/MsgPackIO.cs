@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections;
 using MsgPack.Serialization;
+using System.Collections.Generic;
 
 namespace scopely.msgpacksharp
 {
@@ -12,36 +13,63 @@ namespace scopely.msgpacksharp
 		private static readonly DateTime unixEpocUtc = new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc );
 		private const string nullProhibitedExceptionMessage = "Null value encountered but is prohibited";
 
+        internal static int ReadNumArrayElements(BinaryReader reader)
+        {
+            byte header = reader.ReadByte();
+            int numElements = -1;
+            if (header != MsgPackConstants.Formats.NIL)
+            {
+                if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
+                {
+                    numElements = header - MsgPackConstants.FixedArray.MIN;
+                }
+                else if (header == MsgPackConstants.Formats.ARRAY_16)
+                {
+                    numElements = (reader.ReadByte() << 8) +
+                    reader.ReadByte();
+                }
+                else if (header == MsgPackConstants.Formats.ARRAY_32)
+                {
+                    numElements = (reader.ReadByte() << 24) +
+                        (reader.ReadByte() << 16) +
+                        (reader.ReadByte() << 8) +
+                        reader.ReadByte();
+                }
+                else
+                {
+                    throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification at offset " + reader.BaseStream.Position);
+                }
+            }
+            return numElements;
+        }
+
+        internal static void DeserializeArray(Array array, int numElements, BinaryReader reader)
+        {
+            Type elementType = array.GetType().GetElementType();
+            for (int i = 0; i < numElements; i++)
+            {
+                object o = DeserializeValue(elementType, reader, NilImplication.Null);
+                object safeVal = null;
+                if (o != null)
+                {
+                    if (elementType.IsGenericType && elementType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                        safeVal = Convert.ChangeType(o, Nullable.GetUnderlyingType(elementType));
+                    else
+                        safeVal = Convert.ChangeType(o, elementType);
+                }
+                array.SetValue(safeVal, i);
+            }
+        }
+
 		internal static bool DeserializeCollection(IList collection, BinaryReader reader)
 		{
 			bool isNull = true;
 			if (!collection.GetType().IsGenericType)
 				throw new NotSupportedException("Only generic List<T> lists are supported");
 			Type elementType = collection.GetType().GetGenericArguments()[0];
-			byte header = reader.ReadByte();
-			int numElements = 0;
-			if (header != MsgPackConstants.Formats.NIL)
-			{
-				if (header >= MsgPackConstants.FixedArray.MIN && header <= MsgPackConstants.FixedArray.MAX)
-				{
-					numElements = header - MsgPackConstants.FixedArray.MIN;
-				}
-				else if (header == MsgPackConstants.Formats.ARRAY_16)
-				{
-					numElements = (reader.ReadByte() << 8) + 
-						reader.ReadByte();
-				}
-				else if (header == MsgPackConstants.Formats.ARRAY_32)
-				{
-					numElements = (reader.ReadByte() << 24) +
-						(reader.ReadByte() << 16) +
-						(reader.ReadByte() << 8) +
-						reader.ReadByte();
-				}
-				else
-				{
-					throw new ApplicationException("The serialized data format is invalid due to an invalid array size specification at offset " + reader.BaseStream.Position);
-				}
+            int numElements = ReadNumArrayElements(reader);
+            if (numElements >= 0)
+            {
 				isNull = false;
 				for (int i = 0; i < numElements; i++)
 				{
@@ -60,20 +88,21 @@ namespace scopely.msgpacksharp
 			return isNull;
 		}
 
-		internal static bool DeserializeCollection(IDictionary collection, BinaryReader reader)
+        internal static bool DeserializeCollection(IDictionary collection, BinaryReader reader, byte? header = null)
 		{
 			bool isNull = true;
 			if (!collection.GetType().IsGenericType)
 				throw new NotSupportedException("Only generic Dictionary<T,U> dictionaries are supported");
 			Type keyType = collection.GetType().GetGenericArguments()[0];
 			Type valueType = collection.GetType().GetGenericArguments()[1];
-			byte header = reader.ReadByte();
+            if (!header.HasValue)
+			    header = reader.ReadByte();
 			if (header != MsgPackConstants.Formats.NIL)
 			{
 				int numElements = 0;
 				if (header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX)
 				{
-					numElements = header - MsgPackConstants.FixedMap.MIN;
+                    numElements = header.Value - MsgPackConstants.FixedMap.MIN;
 				}
 				else if (header == MsgPackConstants.Formats.MAP_16)
 				{
@@ -100,6 +129,8 @@ namespace scopely.msgpacksharp
                     {
                         if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(Nullable<>))
                             safeVal = Convert.ChangeType(val, Nullable.GetUnderlyingType(valueType));
+                        else if (valueType == typeof(object))
+                            safeVal = val;
                         else
                             safeVal = Convert.ChangeType(val, valueType);
                     }
@@ -156,8 +187,16 @@ namespace scopely.msgpacksharp
 			}
 			else if (type == typeof(DateTime))
 			{
-				long unixEpochTicks = (long)ReadMsgPackInt(reader, nilImplication);
-				result = ToDateTime(unixEpochTicks);
+                object boxedVal = ReadMsgPackInt(reader, nilImplication);
+                if (boxedVal == null)
+                {
+                    result = null;
+                }
+                else
+                {
+                    long unixEpochTicks = (long)boxedVal;
+                    result = ToDateTime(unixEpochTicks);
+                }
 			}
 			else if (type.IsEnum)
 			{
@@ -166,54 +205,69 @@ namespace scopely.msgpacksharp
 			}
 			else if (type.IsArray)
 			{
-				throw new ApplicationException("Raw arrays are not supported by msgpack-sharp");
+                int numElements = MsgPackIO.ReadNumArrayElements(reader);
+                if (numElements == -1)
+                {
+                    result = null;
+                }
+                else
+                {
+                    result = Activator.CreateInstance(type, new object[] { numElements });
+                    MsgPackIO.DeserializeArray((Array)result, numElements, reader);
+                }
 			}
 			else if (type == typeof(System.Object))
 			{
 				byte header = reader.ReadByte();
-				if (header == MsgPackConstants.Formats.NIL)
-					result = null;
-				else if (header == MsgPackConstants.Bool.TRUE)
-					result = true;
-				else if (header == MsgPackConstants.Bool.FALSE)
-					result = false;
-				else if (header == MsgPackConstants.Formats.FLOAT_64)
-					result = ReadMsgPackDouble(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.FLOAT_32)
-					result = ReadMsgPackFloat(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.INTEGER_16)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.INTEGER_32)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.INTEGER_64)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.INTEGER_8)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.STRING_8)
-					result = ReadMsgPackString(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.STRING_16)
-					result = ReadMsgPackString(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.STRING_32)
-					result = ReadMsgPackString(reader, nilImplication, header);
-				else if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
-					result = ReadMsgPackString(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_8)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_16)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_32)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_64)
-					result = ReadMsgPackInt(reader, nilImplication, header);
-				else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
-				{
-					if (header == 0)
-						result = 0;
-					else
-						result = ReadMsgPackInt(reader, nilImplication, header);
-				}
-				else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header <= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
-					result = ReadMsgPackInt(reader, nilImplication, header);
+                if (header == MsgPackConstants.Formats.NIL)
+                    result = null;
+                else if (header == MsgPackConstants.Bool.TRUE)
+                    result = true;
+                else if (header == MsgPackConstants.Bool.FALSE)
+                    result = false;
+                else if (header == MsgPackConstants.Formats.FLOAT_64)
+                    result = ReadMsgPackDouble(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.FLOAT_32)
+                    result = ReadMsgPackFloat(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.INTEGER_16)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.INTEGER_32)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.INTEGER_64)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.INTEGER_8)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.STRING_8)
+                    result = ReadMsgPackString(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.STRING_16)
+                    result = ReadMsgPackString(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.STRING_32)
+                    result = ReadMsgPackString(reader, nilImplication, header);
+                else if (header >= MsgPackConstants.FixedString.MIN && header <= MsgPackConstants.FixedString.MAX)
+                    result = ReadMsgPackString(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_8)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_16)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_32)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header == MsgPackConstants.Formats.UNSIGNED_INTEGER_64)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if (header >= MsgPackConstants.FixedInteger.POSITIVE_MIN && header <= MsgPackConstants.FixedInteger.POSITIVE_MAX)
+                {
+                    if (header == 0)
+                        result = 0;
+                    else
+                        result = ReadMsgPackInt(reader, nilImplication, header);
+                }
+                else if (header >= MsgPackConstants.FixedInteger.NEGATIVE_MIN && header <= MsgPackConstants.FixedInteger.NEGATIVE_MAX)
+                    result = ReadMsgPackInt(reader, nilImplication, header);
+                else if ((header >= MsgPackConstants.FixedMap.MIN && header <= MsgPackConstants.FixedMap.MAX) ||
+                         header == MsgPackConstants.Formats.MAP_16 || header == MsgPackConstants.Formats.MAP_32)
+                {
+                    result = new Dictionary<string,object>();
+                    MsgPackIO.DeserializeCollection((Dictionary<string,object>)result, reader, header);
+                }
 				else
 					isRichType = true;
 			}

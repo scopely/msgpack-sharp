@@ -19,6 +19,22 @@ namespace scopely.msgpacksharp.tests
             ENTRY_1,
         }
 
+        [Test]
+        public void RoundTripNestedDictionary()
+        {
+            var parent = new Dictionary<string,object>();
+            var child = new Dictionary<string,object>();
+            child["Foo"] = "Bar";
+            parent["Child"] = child;
+            byte[] buffer = parent.ToMsgPack();
+            var restored = MsgPackSerializer.Deserialize<Dictionary<string,object>>(buffer);
+            Assert.IsNotNull(restored);
+            Assert.AreEqual(1, restored.Count);
+            Assert.IsTrue(restored.ContainsKey("Child"));
+            Assert.IsTrue(restored["Child"] is Dictionary<string,object>);
+            Assert.AreEqual("Bar", ((Dictionary<string,object>)restored["Child"])["Foo"]);
+        }
+
 		[Test]
 		public void TestAsMaps()
 		{
