@@ -63,10 +63,13 @@ namespace scopely.msgpacksharp
 		private static MsgPackSerializer GetSerializer(Type t)
 		{
 			MsgPackSerializer result = null;
-            if (!DefaultContext.Serializers.TryGetValue(t, out result))
-			{
-                result = DefaultContext.Serializers[t] = new MsgPackSerializer(t);
-			}
+            lock (DefaultContext.Serializers)
+            {
+                if (!DefaultContext.Serializers.TryGetValue(t, out result))
+                {
+                    result = DefaultContext.Serializers[t] = new MsgPackSerializer(t);
+                }
+            }
 			return result;
 		}
 
