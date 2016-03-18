@@ -42,6 +42,10 @@
     <Compile Include="Habitat.cs" />
     <Compile Include="SerializationTestObject.cs" />
     <Compile Include="Tank.cs" />
+    <Compile Include="Prize.cs" />
+    <Compile Include="GameEvent.cs" />
+    <Compile Include="GameEventsGetResponse.cs" />
+    <Compile Include="GameMarquee.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

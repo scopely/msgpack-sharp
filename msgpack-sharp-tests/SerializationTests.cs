@@ -4,12 +4,15 @@ using scopely.msgpacksharp.Extensions;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
+using System.Threading;
 
 namespace scopely.msgpacksharp.tests
 {
 	[TestFixture]
 	public class SerializationTests
 	{
+        private volatile int numVerified;
+
         public enum TestEnum
         {
             ENTRY_0 = 0,
@@ -297,6 +300,81 @@ namespace scopely.msgpacksharp.tests
             Assert.AreEqual(tank.Name, restoredTank.Name);
             Assert.AreEqual(tank.MaxSpeed, restoredTank.MaxSpeed);
             VerifyAnimalMessage(tank.Cargo, restoredTank.Cargo);
+        }
+
+        [Test]
+        public void TestEventDtos()
+        {
+            var dto = new GameEventsGetResponse();
+            dto.Marquees = new List<GameMarquee>();
+            dto.Events = new List<GameEvent>();
+            dto.Events.Add(new GameEvent()
+            {
+                Id = 66,
+                Order = 0,
+                StartTime = DateTime.Now.Subtract(new TimeSpan(1,0,0)),
+                EndTime = DateTime.Now.Add(new TimeSpan(1,0,0)),
+                Icon = "https://s3.amazonaws.com/dev-withbuddies-event-lobby/41d62a1b-7926-4754-84c8-0c6c91da401c",
+                Title = "Amber Special Event",
+                Subtitle = "Testing 4.17 features"
+            });
+            dto.Version = "2";
+            MsgPackSerializer.DefaultContext.RegisterSerializer<GameEventsGetResponse>("Events", "Marquees", "Version");
+            MsgPackSerializer.DefaultContext.RegisterSerializer<GameEvent>("Id", "Order", "StartTime", "EndTime", "Icon", "Title", "Subtitle");
+            byte[] payload = dto.ToMsgPack();
+            Assert.IsNotNull(payload);
+            Assert.AreNotEqual(0, payload.Length);
+            var restoredDto = MsgPackSerializer.Deserialize<GameEventsGetResponse>(payload);
+            Assert.IsNotNull(restoredDto);
+            Assert.AreEqual("2", restoredDto.Version);
+            Assert.IsNotNull(restoredDto.Events);
+            Assert.AreEqual(1, restoredDto.Events.Count);
+            Assert.AreEqual(dto.Events[0].Id, restoredDto.Events[0].Id);
+            Assert.AreEqual(dto.Events[0].Order, restoredDto.Events[0].Order);
+            Assert.AreEqual(dto.Events[0].Icon, restoredDto.Events[0].Icon);
+            Assert.AreEqual(dto.Events[0].Title, restoredDto.Events[0].Title);
+            Assert.AreEqual(dto.Events[0].Subtitle, restoredDto.Events[0].Subtitle);
+        }
+
+        [Test]
+        public void TestMultiThreading()
+        {
+            const int numTestIterations = 5;
+            for (int j = 0; j < numTestIterations; j++)
+            {
+                const int numThreads = 10;
+                const int numPerThread = 1000;
+                var threads = new List<Thread>(numThreads);
+                var source = AnimalMessage.CreateTestMessage();
+                for (int i = 0; i < numThreads; i++)
+                {
+                    threads.Add(new Thread(() =>
+                    {
+                        RoundTrip(source, numPerThread, j > 0);
+                    }));
+                }
+                numVerified = 0;
+                foreach (var thread in threads)
+                {
+                    thread.Start();
+                }
+                foreach (var thread in threads)
+                {
+                    thread.Join(5000);
+                }
+                Assert.AreEqual(numThreads * numPerThread, numVerified);
+            }
+        }
+
+        private void RoundTrip(AnimalMessage input, int numTrips, bool verify)
+        {
+            for (int i = 0; i < numTrips; i++)
+            {
+                byte[] buffer = input.ToMsgPack();
+                if (verify)
+                    VerifyAnimalMessage(input, MsgPackSerializer.Deserialize<AnimalMessage>(buffer));
+                numVerified++;
+            }
         }
 
         private void VerifyAnimalMessage(AnimalMessage msg, AnimalMessage restored)
