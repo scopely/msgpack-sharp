@@ -143,16 +143,19 @@ namespace scopely.msgpacksharp
 			}
 		}
 
-		public static void DeserializeObject(object o, byte[] buffer, int offset)
+		public static int DeserializeObject(object o, byte[] buffer, int offset)
 		{
+			int numRead = 0;
 			using (MemoryStream stream = new MemoryStream(buffer))
 			{
 				stream.Seek(offset, SeekOrigin.Begin);
 				using (BinaryReader reader = new BinaryReader(stream))
 				{
 					GetSerializer(o.GetType()).Deserialize(o, reader);
+					numRead = (int)stream.Position;
 				}
 			}
+			return numRead;
 		}
 
 		internal static object DeserializeObject(object o, BinaryReader reader, NilImplication nilImplication = NilImplication.MemberDefault)
